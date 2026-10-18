@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "gameId": "pf316qyoc7dg",
+  "title": "無題のゲーム",
+  "versionId": "f9b05d83-fd28-4ea2-8e27-ff008b32ecd2",
+  "snapshotAt": "2026-10-18T13:01:20.068Z",
+  "playUrl": "https://gcn-play.com/play/pf316qyoc7dg",
+  "files": [
+    {
+      "path": "README.md",
+      "mime": "text/markdown; charset=utf-8",
+      "bytes": 1868,
+      "sha256": "68e2128ddbd166477a211ba76ee0f116f49b44d8492b79b2d32a1c65a11b171a"
+    },
+    {
+      "path": "index.html",
+      "mime": "text/html; charset=utf-8",
+      "bytes": 66313,
+      "sha256": "409e3b9d1ff4fdcd3640d810efd530616b74420718c1aeccad6f20ed30fc91e3"
+    }
+  ],
+  "skipped": []
+}

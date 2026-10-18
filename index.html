@@ -1,0 +1,1254 @@
+<!doctype html><script>(function(){try{Object.freeze(Object.prototype);Object.freeze(Array.prototype);}catch(e){}})();(function(){var ok=false;try{var A=Reflect.apply,D=Object.defineProperty,G=Object.getOwnPropertyDescriptor;var IP=HTMLInputElement.prototype,EP=Element.prototype,NP=Node.prototype,MP=MutationRecord.prototype,LP=NodeList.prototype;var td=G(IP,"type"),vd=G(IP,"value"),ln=G(EP,"localName").get,nt=G(NP,"nodeType").get;var sa=EP.setAttribute,qa=EP.querySelectorAll,rmv=EP.remove;var rt=G(MP,"type").get,rg=G(MP,"target").get,ra=G(MP,"addedNodes").get,nl=G(LP,"length").get,ni=LP.item;var low=String.prototype.toLowerCase,trim=String.prototype.trim;var need=[A,D,G,td.get,td.set,vd.set,ln,nt,sa,qa,rmv,rt,rg,ra,nl,ni,low,trim];for(var k=0;k<need.length;k++)if(typeof need[k]!=="function")throw new Error("dep");var no=function(){throw new Error("not allowed")};var ban=["setHTMLUnsafe","setHTML"];for(var q=0;q<ban.length;q++)if(ban[q]in EP)D(EP,ban[q],{configurable:false,writable:false,value:no});var banD=["parseHTMLUnsafe","parseHTML"];for(var q2=0;q2<banD.length;q2++)if(banD[q2]in Document)D(Document,banD[q2],{configurable:false,writable:false,value:no});var isPw=function(s){return A(low,A(trim,""+s,[]),[])==="password"};var neutralize=function(n){A(vd.set,n,[""]);A(td.set,n,["text"])};D(IP,"type",{configurable:false,enumerable:td.enumerable,get:function(){return A(td.get,this,[])},set:function(v){var s=""+v;if(isPw(s)){A(vd.set,this,[""]);s="text"}A(td.set,this,[s])}});D(EP,"setAttribute",{configurable:false,writable:false,value:function(n,v){var N=""+n,V=""+v;if(A(low,N,[])==="type"&&A(ln,this,[])==="input"&&isPw(V)){A(vd.set,this,[""]);V="text"}return A(sa,this,[N,V])}});D(EP,"attachShadow",{configurable:false,writable:false,value:no});var fix=function(n){try{if(A(nt,n,[])!==1)return;var l=A(ln,n,[]);if(l==="iframe"||l==="frame"||l==="object"||l==="embed"){A(rmv,n,[]);return}if(l==="input"&&A(td.get,n,[])==="password")neutralize(n)}catch(e){}};var scan=function(n){if(!n||A(nt,n,[])!==1)return;fix(n);var l=A(qa,n,["input,iframe,frame,object,embed"]),c=A(nl,l,[]);for(var i=0;i<c;i++)fix(A(ni,l,[i]))};var mo=new MutationObserver(function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(A(rt,r,[])==="attributes")fix(A(rg,r,[]));else{var ad=A(ra,r,[]),c=A(nl,ad,[]);for(var j=0;j<c;j++)scan(A(ni,ad,[j]))}}});mo.observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:["type"]});ok=true}catch(e){}if(!ok){try{window.stop()}catch(e){}throw new Error("GCN hardening failed")}})();</script><script>var __GCN_ASSETS__ = {"images":{},"sfx":{},"music":{},"videos":{},"models":{}};
+// bridge: 自由記述 HTML モード（rtfree-3）向けの依存ゼロ IIFE ブリッジ（D-043・docs/freeform-design.md）。
+// K3 が書いた完全な HTML 文書に、合成時（apps/platform/src/gen/compose.ts の composeFreeform）が
+// <head> 直後へ <script> として 1 本インライン注入する。
+//
+// postMessage プロトコルは games/runtime/gamekit.js と**同一のメッセージ種別・ペイロード形式**を使う。
+// これにより Play.tsx / apps/platform/src/verify/gate-a.ts の受け側は変更不要になる
+// （親 → iframe: {kind:"gamekit-init", versionId, saveData, publicTitle}+port2 / iframe → 親: gamekit-ready
+//   / gamekit-error / gamekit-score / gamekit-save）。
+//
+// 公開 API（apps/platform/src/ai/prompts.ts の buildFreeformReference と同期させること）:
+//   GCN.saveData  … 復元用セーブデータ。init 受信までは null、受信後は渡されたオブジェクト
+//   GCN.publicTitle … プレイページで公開されているゲーム名（文字列）。init 受信までは null。
+//     受信時に document.title と文書内の全 [data-gcn-title] 要素（textContent）へも自動反映する
+//     （rtfree-3 / D-067。canvas に直接描くゲームは GCN.publicTitle || "仮タイトル" の形で読む）
+//   GCN.assets    … 生成素材マニフェスト（images/sfx/music/videos/models。値は URL 文字列）。
+//     __GCN_ASSETS__ グローバル（compose.ts が注入）があればそれを使い、無ければ空マニフェスト
+//   GCN.score(n)   … スコア（数値）を親ページへ送信する
+//   GCN.save(str)  … セーブデータ（JSON 文字列。呼び出し側で JSON.stringify 済みのもの）を送信する
+//   GCN.onInit     … 任意のユーザー定義コールバック（function (saveData) {...}）。
+//     init 受信時に saveData を渡して呼ばれる（生成ロジック側が代入する。未定義なら何もしない）
+//
+// このファイルのソースには script 閉じタグの文字列（山括弧 + スラッシュ + script）を
+// 含めないこと（compose.ts が script 要素として生のまま埋め込むため。含めると HTML パーサが
+//  そこでスクリプトを終端してしまう）。
+(function (global) {
+  "use strict";
+
+  var MAX_REPORTED_ERRORS = 20; // 診断チャネルへの連投防止（同一フレームで例外が続くケース対策）
+  // rtfree-2（D-045）: 自分由来と判定できないエラーの診断枠。自動修正はしないが、
+  // 「ホワイトリストが厳しすぎて本物のエラーを落としていないか」を D1 で測れるように少数だけ通す。
+  // 自分由来の枠（MAX_REPORTED_ERRORS）とは別勘定にして、拡張のノイズが本物のエラーを押し出さないようにする
+  var MAX_FOREIGN_REPORTS = 3;
+  // rtfree-2（D-045 追補 3・codex-review P2-1）: gamekit-init より前のエラーを溜めるキューは
+  // **両方の枠の合計**を収容する。以前は MAX_REPORTED_ERRORS（20）しか無く、self 枠と foreign 枠が
+  // 同じキューを食い合っていた（拡張 3 件の後に自分由来 20 件が来ると 17 件しか入らず、逆順なら
+  // foreign サンプルが全部落ちる）。docs/decisions.md が約束した「別勘定」がここで崩れていた。
+  // reportError は枠ごとの上限を**push より前**に課すので、実際に積まれるのは self ≤ 20 + foreign ≤ 3。
+  var MAX_PENDING_ERRORS = MAX_REPORTED_ERRORS + MAX_FOREIGN_REPORTS;
+  // 診断値の上限（親 → D1 へ運ぶため有界にする）
+  var MAX_SELF_ERROR_COUNT = 9999;
+
+  var diagPort = null;
+  var diagVersionId = null;
+  var reportedErrorCount = 0;
+  var foreignReportCount = 0;
+  var pendingErrors = []; // port 確立前に発生したエラーを溜めておき、確立後にまとめて送る
+  var readyFlag = false; // load + rAF 2 フレーム経過（ready 自動送信の条件その 1）
+  var readySent = false;
+  // rtfree-2（D-045 追補・敵対的検証の指摘 1b）: 自分由来のエラーを何件観測したか。
+  // ready は「読み込みが終わった」ではなく「**起動できた**」の合図でなければならない。
+  // 以前は load + rAF 2 回で無条件送信していたため、起動時の同期例外で真っ黒になった
+  // ゲームでも ready が飛び、親・サーバーが「起動成功した版」と誤認して自動修正を止めていた。
+  // 追補 3（codex-review P1-1）: 件数として持ち、gamekit-ready の payload にも載せる。
+  // 親はこれを HTTP 報告へ転送し、サーバーは「観測エラー付きの ready」を権威にしない
+  // （報告 POST の到達順に依存せず、ランタイム自身の観測を根拠にできる）
+  var selfErrorCount = 0;
+
+  // ==========================================================================
+  // rtfree-2（D-045）: エラーの発生源フィルタ
+  //
+  // 実害: ブラウザ拡張（MetaMask）が注入したスクリプトの例外を gamekit-error として親へ報告し、
+  // 親が「ゲームが壊れた」と誤認して自動修正（= K3 の再生成 = クレジット消費）を走らせていた。
+  //
+  // 方針は**ホワイトリスト**（自分の URL だけ許可）。chrome-extension: / moz-extension: /
+  // safari-web-extension: … といったスキームの**ブラックリスト列挙は採らない** — 拡張の種類は
+  // 無限にあり列挙は必ず漏れるため（同じ教訓を D-044 の静的検査でも得ている）。
+  // ==========================================================================
+
+  // sandbox（allow-same-origin なし）の文書はオペークオリジンで location.origin が "null" に
+  // なるため使えない。URL パーサ自体は文書のオリジン不透明性の影響を受けないので、
+  // location.href を parse して scheme + host を自前で取り出す。
+  var ownOriginPrefix = (function () {
+    try {
+      var parsed = new global.URL(String(global.location.href));
+      if (!parsed.protocol || !parsed.host) {
+        return null;
+      }
+      return parsed.protocol + "//" + parsed.host + "/";
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  function ownDocumentUrl() {
+    try {
+      return String(global.location.href);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * error イベントの filename が「自分の文書（と同一オリジンの素材）」かどうか。
+   * インラインスクリプトの例外では filename に文書 URL がそのまま入り、
+   * 同一オリジンの外部スクリプト（/a/<versionId>/…）ではその URL が入る。どちらも許可する。
+   *
+   * filename が空文字 / undefined のケースは**自分由来と確認できない**ため false に倒す。
+   * opaque-origin sandbox の WebKit では、自文書の inline 例外も filename="" / "Script error." /
+   * 空 stack に匿名化され得るが、拡張等との区別が付かない。親はこの厳密な形だけを
+   * opaque-unattributed として観測し、自動修正には使わない（D-058）。
+   */
+  function isOwnSourceUrl(url) {
+    if (typeof url !== "string" || url === "") {
+      return false;
+    }
+    if (ownOriginPrefix !== null) {
+      return url.slice(0, ownOriginPrefix.length) === ownOriginPrefix;
+    }
+    // オリジンを取り出せない文書（about:blank 等）は文書 URL との完全一致だけを許可する
+    var href = ownDocumentUrl();
+    return href !== null && url === href;
+  }
+
+  /**
+   * unhandledrejection には filename が無いため、reason.stack に自分のオリジンが現れるかで判定する
+   * （ホワイトリスト方針は維持）。stack が無い / オリジンを取り出せない = **判定不能は「自分由来ではない」に倒す**。
+   * 理由: 誤って自分由来とみなすと無駄な K3 再生成（実費）が発生する。一方こちらに倒しても
+   * 診断報告自体は届き（自動修正だけしない）、ユーザーはチャットで修正を指示できる。
+   * 起動失敗の主な形は同期例外（error イベント + filename あり）なので、取りこぼしは限定的。
+   */
+  function stackMentionsOwnSource(stack) {
+    if (typeof stack !== "string" || stack === "" || ownOriginPrefix === null) {
+      return false;
+    }
+    return stack.indexOf(ownOriginPrefix) !== -1;
+  }
+
+  function emptyAssetsManifest() {
+    return { images: {}, sfx: {}, music: {}, videos: {}, models: {} };
+  }
+
+  // compose.ts が bridge スクリプトの直前に `var __GCN_ASSETS__ = {...};` を注入する
+  // （games/runtime/gamekit.js の __GAMEKIT_ASSETS__ と同じ取り込み方式）。
+  // 取り込んだらグローバルからは即座に消す（生成ロジックに生の変数を触らせない）
+  var assetsManifest = (function () {
+    var manifest = global.__GCN_ASSETS__;
+    try {
+      delete global.__GCN_ASSETS__;
+    } catch (e) {}
+    return manifest && typeof manifest === "object" ? manifest : emptyAssetsManifest();
+  })();
+
+  function sendPortMessage(payload) {
+    if (!diagPort) {
+      return;
+    }
+    try {
+      diagPort.postMessage(payload);
+    } catch (e) {
+      // port が閉じている等は握りつぶす（診断送信の失敗でゲーム進行を止めない）
+    }
+  }
+
+  /**
+   * @param selfOrigin false を渡すと「自分由来と確認できないエラー」として扱う（既定は true）。
+   *   親はこの印を見て自動修正（課金）を要求しない。**判定の権威は親**であり、これは親に渡す材料。
+   */
+  function reportError(message, stack, selfOrigin) {
+    var isSelf = selfOrigin !== false;
+    if (isSelf) {
+      // 打ち切り（上限超過）の前に数える。上限に達したあとのエラーでも「起動できていない」
+      // 事実は変わらないため、ready を送らない判断はここで確定させる
+      if (selfErrorCount < MAX_SELF_ERROR_COUNT) {
+        selfErrorCount += 1;
+      }
+      if (reportedErrorCount >= MAX_REPORTED_ERRORS) {
+        return;
+      }
+      reportedErrorCount += 1;
+    } else {
+      if (foreignReportCount >= MAX_FOREIGN_REPORTS) {
+        return;
+      }
+      foreignReportCount += 1;
+    }
+    var payload = {
+      kind: "gamekit-error",
+      versionId: diagVersionId,
+      message: String(message === null || message === undefined ? "unknown error" : message),
+      stack: stack ? String(stack) : undefined,
+      // rtfree-2（D-045）: 親が自動修正を要求してよいかの材料。
+      // selfOrigin=false → 自分のコード由来と確認できない（拡張由来の可能性）
+      // afterReady=true  → gamekit-ready 送信後に起きた（= 起動には成功している）
+      selfOrigin: isSelf,
+      afterReady: readySent
+    };
+    if (!diagPort) {
+      if (pendingErrors.length < MAX_PENDING_ERRORS) {
+        pendingErrors.push(payload);
+      }
+      return;
+    }
+    sendPortMessage(payload);
+  }
+
+  function tryReportReady() {
+    // rtfree-2（D-045 追補）: 自分由来のエラーを 1 件でも観測していたら ready は送らない。
+    // 「起動時に真っ黒 → その後 ready」で自動修正が取りこぼされる後退を塞ぐ。
+    // なおこの判定は ready 送信前だけに効く（送信後のエラーは readySent で先に return する）ため、
+    // 「起動には成功したがプレイ中に落ちた」ゲームの ready は従来どおり有効。
+    if (readySent || !diagPort || !readyFlag || selfErrorCount > 0) {
+      return;
+    }
+    readySent = true;
+    // selfErrorCount は上の条件により常に 0 だが、payload には明示的に載せる（追補 3・P1-1）。
+    // 親・サーバーは「ready と一緒に運ばれてきた観測件数」だけを見れば良く、
+    // gamekit-error の HTTP 報告が失われた／遅れて処理された場合でも判断が壊れない
+    sendPortMessage({ kind: "gamekit-ready", versionId: diagVersionId, selfErrorCount: selfErrorCount });
+  }
+
+  // ==========================================================================
+  // rtfree-3（D-067）: 公開タイトル（親 Play.tsx が gamekit-init に積む games.title）の反映。
+  //
+  // 自由記述モードには GameKit のようなタイトル画面の構造が無いため、「どの要素がタイトルか」は
+  // 文書側が data-gcn-title 属性で宣言する契約にする（docs/freeform-design.md「bridge の仕様」）。
+  // 反映はプッシュ型 — ゲームが先に開始オーバーレイを描いてから init が届く順序が普通に起こるため、
+  // 受信時に既存 DOM を書き換える。描画順に依存しない。
+  //
+  // 置換は textContent 限定で innerHTML は使わない。公開タイトルはクリエイターの自由入力であり、
+  // HTML として解釈させると生成ゲームの文書内へ任意マークアップを流し込めてしまう
+  // （値をデータとしてのみ扱う原則。Play.tsx の toInlineScriptJson と同じ考え方）。
+  //
+  // 受信検証（文字列かつ trim 後が非空）は gamekit.js rt-10 / gamekit3d.js rt3d-3 と同じ形に揃える。
+  // DOM 操作は fail-open: タイトル表示の失敗でゲーム進行や ready 送信を止めない。
+  // ==========================================================================
+  function applyPublicTitle(value) {
+    if (typeof value !== "string") {
+      return;
+    }
+    var title = value.trim();
+    if (title === "") {
+      return;
+    }
+    GCN.publicTitle = title;
+    try {
+      global.document.title = title;
+    } catch (e) {}
+    try {
+      var nodes = global.document.querySelectorAll("[data-gcn-title]");
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].textContent = title;
+      }
+    } catch (e) {}
+  }
+
+  // オペークオリジンでは event.origin が "null" になり送信元検証に使えないため、
+  // MessageChannel の port を専有すること自体を認証代わりにする（gamekit.js と同じ考え方）。
+  // compose.ts は正常形 HTML の <head> 直後へ注入し、stopImmediatePropagation で後続の
+  // 生成ロジックへ同じイベント・port を渡さない。ただし malformed な要素順では先行 script を
+  // 原理的に排除できないため、これは defense-in-depth であり権威的制御は Play.tsx 側が担う。
+  global.addEventListener("message", function (event) {
+    var data = event.data;
+    if (!data || data.kind !== "gamekit-init") {
+      return;
+    }
+    event.stopImmediatePropagation();
+    diagVersionId = typeof data.versionId === "string" ? data.versionId : null;
+    if (data.saveData !== undefined && data.saveData !== null && typeof data.saveData === "object") {
+      GCN.saveData = data.saveData;
+    }
+    // rtfree-3（D-067）: port の有無に関係なく反映する（下の early return より前に置く）。
+    // 公開タイトルの表示は診断チャネルとは独立した機能で、port が取れない環境でも出るべきもの
+    applyPublicTitle(data.publicTitle);
+    diagPort = (event.ports && event.ports[0]) || null;
+    if (!diagPort) {
+      return;
+    }
+    for (var i = 0; i < pendingErrors.length; i++) {
+      pendingErrors[i].versionId = diagVersionId;
+      sendPortMessage(pendingErrors[i]);
+    }
+    pendingErrors = [];
+    // rtfree-2（D-045 追補 3・codex-review P1-2）: onInit は **ready より必ず前**に呼ぶ。
+    // onInit はセーブ復元などゲームの初期化を行う場所であり、ここで throw する = 起動できていない。
+    // 以前は init が「load + rAF 2 回」より後に届くと readyFlag が既に true のため、
+    // tryReportReady() → onInit の順になり、onInit の例外が afterReady:true 扱いで報告され、
+    // 親が唯一の自動修正を抑制していた（D-045 で塞いだはずの「起動時の同期例外」の別経路）。
+    // 例外は reportError 経由で selfErrorCount を増やすので、下の tryReportReady が ready を見送る。
+    if (typeof GCN.onInit === "function") {
+      try {
+        GCN.onInit(GCN.saveData);
+      } catch (e) {
+        reportError(e && e.message ? e.message : String(e), e && e.stack);
+      }
+    }
+    // init が ready 条件（load + rAF 2 回）より後に届いた場合はここで即送信、
+    // 先に届いていた場合は load ハンドラ側の tryReportReady が後から送る（順序両対応）
+    tryReportReady();
+  });
+
+  global.addEventListener("error", function (event) {
+    // rtfree-2（D-045）: filename のホワイトリスト判定。自分の文書 / 同一オリジンの素材だけが
+    // 自動修正の候補になる（拡張注入スクリプトは filename が chrome-extension://… 等で弾かれる）
+    reportError(event.message, event.error && event.error.stack, isOwnSourceUrl(event.filename));
+  });
+  global.addEventListener("unhandledrejection", function (event) {
+    var reason = event.reason;
+    var stack = reason && reason.stack;
+    reportError(
+      reason && reason.message ? reason.message : String(reason),
+      stack,
+      stackMentionsOwnSource(stack)
+    );
+  });
+
+  // ready 自動送信: load イベントの後、requestAnimationFrame を 2 回挟んでからフラグを立てる
+  // （1 回だと最初の描画が済む前に ready を送ってしまい得るため。ゲート A の headless 検証が
+  // 最初のスクリーンショットを撮る前に初期描画が済んでいることを期待するため 2 回待つ）。
+  // rtfree-2（D-045 追補）: フラグが立っても、それまでに自分由来のエラーを観測していれば
+  // tryReportReady が送信を見送る（= ready は「読み込み完了」ではなく「起動できた」の合図）。
+  global.addEventListener("load", function () {
+    global.requestAnimationFrame(function () {
+      global.requestAnimationFrame(function () {
+        readyFlag = true;
+        tryReportReady();
+      });
+    });
+  });
+
+  // 送信抑制（ベストエフォートの UX 最適化）: GameKit と違い呼び出し頻度を生成コード側が
+  // 握るため、善意のゲームループ内から毎フレーム呼ばれた場合の MessagePort 連投を減らす。
+  // ただし bridge は未信頼のゲームコードと同一レルムにあり原理的に回避可能なので、これは
+  // セキュリティ境界ではない。D1 POST の権威的な入力・レート・帯域制御は、信頼済み親ページの
+  // Play.tsx が全ランタイム共通で行う（games/runtime/gamekit.js rt-9 の抑制も同じ位置づけ）。
+  // bridge 自身は「先頭即時 + 2 秒クールダウン + 末尾フラッシュ」に抑制する。
+  // クールダウン中の合成則はチャネルごとに異なる: サーバーはスコアを「受信した値のベスト」で
+  // 保持するため、score は最大値を残す（100 → 0 と続いても 100 を失わない）。save は最新値が正。
+  var THROTTLE_MS = 2000;
+  var TEARDOWN_WINDOW_MS = 2000;
+  // teardown 窓内の即時フラッシュ回数上限（チャネル別）。score は本文が数百バイトなので余裕を
+  // 持たせ、save は最大 4KB 強 × keepalive の合計 in-flight 64KiB 制限（Fetch 仕様）を圧迫しない
+  // よう 3 回に絞る（3 × 4KB ≒ 12KB。codex-review 反復 6 P2。現実のゲームの teardown 書き込みは
+  // 1〜2 回であり実質失わない）
+  var TEARDOWN_SCORE_FLUSH_BUDGET = 10;
+  var TEARDOWN_SAVE_FLUSH_BUDGET = 3;
+  // 通常の compose 出力では bridge を生成コードより前へ注入するため、この時点の Date.now /
+  // setTimeout を閉じ込め、後からの偶発的な monkey-patch の影響を減らす（反復 6 P1）。ただし
+  // 不正な HTML 配置等で先行 script が存在し得る以上、未汚染を権威性の根拠にはしない。
+  var nativeDateNow = Date.now;
+  var nativeSetTimeout = global.setTimeout.bind(global);
+  function makeThrottledSender(send, coalesce, teardownBudgetMax) {
+    var cooldown = false;
+    var pending = null;
+    function trigger(value) {
+      cooldown = true;
+      send(value);
+      nativeSetTimeout(function () {
+        cooldown = false;
+        if (pending !== null) {
+          var next = pending;
+          pending = null;
+          trigger(next);
+        }
+      }, THROTTLE_MS);
+    }
+    // teardown 用の即時フラッシュ窓。trusted なライフサイクルイベントを bridge のリスナーが
+    // 観測したときだけ「時間窓 + 回数上限」が付与され、窓内のクールダウン中 submit は即時
+    // フラッシュされる。これにより「ゲーム側の pagehide ハンドラが bridge のフラッシュより後に
+    // GCN.save/score を呼ぶ」順序でも、teardown 中に同一チャネルへ複数回書く正当なゲーム
+    // （pagehide リスナー 2 つ等。codex-review 反復 5 P1）でも最終値を取りこぼさない。
+    // document.visibilityState は Object.defineProperty で偽装できる（反復 4 P1）ため判定に
+    // 使わない — 窓は trusted イベント由来のみで、合成イベント・プロパティ偽装では開かない。
+    // 乱用の上限は「実イベント 1 回あたり teardownBudgetMax 回・TEARDOWN_WINDOW_MS 以内」。
+    // 上限超過後の書き込みは pending に合成されるだけになる（現実のゲームの teardown 書き込みは
+    // 1〜2 回であり実質失わない）
+    var teardownWindowUntil = 0;
+    var teardownFlushBudget = 0;
+    function submit(value) {
+      if (cooldown) {
+        pending = pending === null ? value : coalesce(pending, value);
+        if (teardownFlushBudget > 0 && nativeDateNow() < teardownWindowUntil) {
+          teardownFlushBudget--;
+          submit.flush();
+        }
+        return;
+      }
+      trigger(value);
+    }
+    // ページ破棄時の取りこぼし防止: クールダウン待ちの未送信値を即時送信する
+    // （タイマーはフレーム破棄で消えるため、待っていると親に届かない）
+    submit.flush = function () {
+      if (pending !== null) {
+        var next = pending;
+        pending = null;
+        send(next);
+      }
+    };
+    submit.armTeardownFlush = function () {
+      teardownWindowUntil = nativeDateNow() + TEARDOWN_WINDOW_MS;
+      teardownFlushBudget = teardownBudgetMax;
+    };
+    submit.disarmTeardownFlush = function () {
+      teardownWindowUntil = 0;
+      teardownFlushBudget = 0;
+    };
+    return submit;
+  }
+  var sendScoreThrottled = makeThrottledSender(function (score) {
+    sendPortMessage({ kind: "gamekit-score", versionId: diagVersionId, score: score });
+  }, function (a, b) {
+    return a > b ? a : b;
+  }, TEARDOWN_SCORE_FLUSH_BUDGET);
+  var sendSaveThrottled = makeThrottledSender(function (json) {
+    sendPortMessage({ kind: "gamekit-save", versionId: diagVersionId, data: json });
+  }, function (a, b) {
+    return b;
+  }, TEARDOWN_SAVE_FLUSH_BUDGET);
+  function flushPendingMessages() {
+    sendScoreThrottled.flush();
+    sendSaveThrottled.flush();
+  }
+  function armTeardownFlush() {
+    sendScoreThrottled.armTeardownFlush();
+    sendSaveThrottled.armTeardownFlush();
+  }
+  function disarmTeardownFlush() {
+    sendScoreThrottled.disarmTeardownFlush();
+    sendSaveThrottled.disarmTeardownFlush();
+  }
+  // pagehide は iOS Safari でも発火する。visibilitychange は保険（gamekit.js rt-9 と同じ）。
+  // isTrusted ガード: ゲームコードが dispatchEvent(new Event("pagehide")) で合成イベントを
+  // 連打してもフラッシュ（= スロットリングのバイパス経路）を踏めないようにする。
+  // フラッシュ後に arm するのは、同じイベントディスパッチ内で後から動くゲーム側ハンドラの
+  // GCN.save/score を即時送信するため（時間窓 + 回数上限。makeThrottledSender 参照）。
+  // hidden 判定は偽装可能な visibilityState を見ず「pagehide = 破棄へ向かう」
+  // 「visibilitychange = 表示状態が切り替わった」という trusted イベントの発生自体で扱う。
+  global.addEventListener("pagehide", function (event) {
+    if (event.isTrusted) {
+      flushPendingMessages();
+      armTeardownFlush();
+    }
+  });
+  global.addEventListener("pageshow", function (event) {
+    // bfcache から復帰したら通常のスロットリング動作に戻す（未使用の窓を破棄）
+    if (event.isTrusted) {
+      disarmTeardownFlush();
+    }
+  });
+  global.addEventListener("visibilitychange", function (event) {
+    // hidden への遷移か visible への復帰かを visibilityState で区別しない（偽装可能なため）。
+    // どちら向きでも「未送信分をフラッシュして窓を付与」で統一する — visible 復帰時に短時間の
+    // 即時送信を許すだけで、乱用には trusted イベントの実発生が必要なので有害でない
+    if (event.isTrusted) {
+      flushPendingMessages();
+      armTeardownFlush();
+    }
+  });
+
+  var GCN = {
+    saveData: null,
+    // rtfree-3（D-067）: 公開タイトル。gamekit-init 受信までは null（プレビューでは常に null）
+    publicTitle: null,
+    assets: assetsManifest,
+    onInit: undefined,
+    score: function (n) {
+      if (typeof n !== "number" || !isFinite(n)) {
+        reportError("GCN.score: 数値を渡してください");
+        return;
+      }
+      sendScoreThrottled(Math.floor(n));
+    },
+    save: function (json) {
+      if (typeof json !== "string") {
+        reportError("GCN.save: JSON 文字列を渡してください（JSON.stringify 済みのもの）");
+        return;
+      }
+      sendSaveThrottled(json);
+    }
+  };
+
+  global.GCN = GCN;
+})(window);
+</script>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>モルック スコアボード</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+:root{--wood1:#d9a05f;--wood2:#a06a35;--wood3:#7a4c24;--cream:#fdf6e3;--accent:#ffc861;--danger:#ff6b5e;--warn:#ffd43b}
+html,body{height:100%}
+body{background:radial-gradient(900px 600px at 75% -10%,#2c6b4f 0%,rgba(44,107,79,0) 60%),radial-gradient(800px 600px at -10% 110%,#1e4d3a 0%,rgba(30,77,58,0) 55%),linear-gradient(180deg,#123527,#0a1f17);color:var(--cream);font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",system-ui,sans-serif;overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+section{position:fixed;inset:0;display:flex;flex-direction:column;animation:fadeUp .35s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
+button{font-family:inherit;cursor:pointer}
+input:focus{outline:none;border-color:#ffd43b88!important}
+.setupScroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.setupInner{max-width:560px;width:100%;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 14px}
+.pins{display:flex;gap:10px;align-items:flex-end;justify-content:center;height:84px}
+.pin{width:32px;height:64px;border-radius:11px 11px 8px 8px;background:linear-gradient(90deg,#8a5a2e,#d9a05f 30%,#e8bd84 50%,#b97f43 75%,#7a4c24);border:2px solid #5d3a1c;box-shadow:0 6px 10px rgba(0,0,0,.5),inset 0 -6px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:var(--cream);font-weight:900;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.7);transform:rotate(var(--r));animation:sway 3.2s ease-in-out var(--d) infinite}
+.pin.tall{height:78px}
+@keyframes sway{50%{transform:rotate(calc(var(--r) + 3deg)) translateY(-4px)}}
+#ttl{text-align:center;font-size:clamp(26px,7.5vw,38px);line-height:1.2;margin:4px 0 2px;text-shadow:0 0 24px rgba(255,200,97,.45),0 3px 8px rgba(0,0,0,.6);letter-spacing:.04em}
+.tag{text-align:center;font-size:13px;opacity:.78;margin-bottom:14px}
+.ruleRow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(15,44,33,.8);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:10px 14px;margin-bottom:12px}
+.rl{font-size:14px;font-weight:800;display:block}
+.rd{font-size:11px;opacity:.65;display:block;margin-top:2px}
+.switch{position:relative;width:70px;height:36px;border-radius:18px;border:2px solid rgba(255,255,255,.16);background:#3a4a42;color:#cfe0d6;font-weight:800;font-size:13px;flex:none;transition:background .15s}
+.switch .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.5);transition:left .15s}
+.switch.on{background:#57c785;color:#123527;border-color:#9fe8bd}
+.switch.on .knob{left:37px}
+.swTxt{position:absolute;top:50%;transform:translateY(-50%);right:11px}
+.switch.on .swTxt{left:11px;right:auto}
+.teamCard{background:rgba(15,44,33,.8);border:1px solid rgba(255,255,255,.11);border-left:5px solid var(--accent);border-radius:16px;padding:12px;margin-bottom:12px}
+.teamHead{display:flex;align-items:center;gap:8px}
+.dot{display:inline-block;width:18px;height:18px;border-radius:50%;flex:none}
+.tname{flex:1;min-width:0;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.13);border-radius:12px;color:var(--cream);padding:10px 12px;font-size:16px;font-weight:700}
+.mRow{display:flex;gap:8px;margin-top:8px;padding-left:26px}
+.mname{flex:1;min-width:0;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);border-radius:10px;color:var(--cream);padding:9px 12px;font-size:16px}
+.mdel,.tdel{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.06);color:#ffb4ab;font-size:16px;flex:none;border:0}
+.madd{margin:10px 0 0 26px;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.27);color:var(--cream);border-radius:10px;padding:8px 12px;font-size:13px}
+.rules{font-size:11px;opacity:.55;text-align:center;line-height:1.6;padding:4px 6px 10px}
+.setupFoot{padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 12px);background:linear-gradient(180deg,rgba(10,31,23,0),#0a1f17 45%)}
+.ghostBtn{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);color:var(--cream);border-radius:14px;padding:13px;font-size:15px;font-weight:700;margin-bottom:10px}
+.primaryBtn{width:100%;background:linear-gradient(180deg,#ffd98a,#f0a93c 55%,#d18a2a);color:#4a2c10;font-weight:900;font-size:20px;border:2px solid #8a5a1d;border-radius:18px;padding:16px;box-shadow:0 5px 0 #7c4d16,0 10px 22px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.6);letter-spacing:.06em}
+.primaryBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #7c4d16,0 4px 10px rgba(0,0,0,.6)}
+#topbar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px}
+#throwCount{flex:1;text-align:center;font-size:13px;font-weight:700;opacity:.8}
+.iconBtn{min-width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:var(--cream);font-size:19px;font-weight:800}
+.iconBtn.arm{width:auto;padding:0 10px;background:#a33a2e;font-size:13px}
+#sheetWrap{flex:1;overflow:auto;margin:4px 10px 8px;border-radius:18px;background:linear-gradient(180deg,#1d4a37,#123326);box-shadow:inset 0 2px 12px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);-webkit-overflow-scrolling:touch}
+#sheet{border-collapse:separate;border-spacing:0;min-width:100%}
+#sheet th,#sheet td{padding:5px 7px;text-align:center;border-bottom:1px solid rgba(255,255,255,.08);min-width:46px;font-weight:400}
+#sheet thead th{position:sticky;top:0;background:#0a231a;z-index:2;font-size:12px;opacity:.85;padding:8px 7px}
+#sheet .pcol{position:sticky;left:0;background:#0e2a1f;z-index:3;min-width:128px;max-width:128px;text-align:left;padding:8px 10px}
+#sheet thead .c0{z-index:5}
+#sheet tr.cur .pcol{box-shadow:inset 4px 0 0 var(--accent);background:#143527}
+#sheet tr.out .pcol{opacity:.55}
+.pn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
+.pn .dot{width:12px;height:12px}
+.pn span{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.outTag{font-style:normal;font-size:9px;background:#a33a2e;color:#fff;border-radius:6px;padding:2px 5px;margin-left:4px}
+.mem{font-size:9px;opacity:.55;margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pinfo{display:flex;align-items:baseline;gap:8px;margin-top:3px}
+.pinfo b{font-size:24px;color:var(--accent);text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.miss{font-size:10px;letter-spacing:2px;color:#ffffff33}
+.miss.m1,.miss.m2{color:var(--warn)}
+.miss.m3{color:var(--danger)}
+.pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:5px;overflow:hidden}
+.pbar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#3bc9db,#69db7c);transition:width .3s}
+.pbar i.hot{background:linear-gradient(90deg,#ffd43b,#ff922b)}
+td .v{font-weight:800;font-size:15px}
+td .c{font-size:9px;opacity:.6}
+td.zero .v{color:#8fa39a}
+td.bust{background:rgba(255,146,43,.18)}
+td.bust .c{color:#ff922b;opacity:1}
+td.last{background:rgba(255,212,59,.14)}
+td.next{position:relative}
+td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255,212,59,.5);border-radius:8px;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.3}}
+#pad{padding:6px 14px calc(env(safe-area-inset-bottom,0px) + 10px);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.35))}
+#turnBanner{display:flex;align-items:center;gap:10px;background:rgba(15,44,33,.85);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:8px 12px;margin-bottom:10px}
+#turnBanner .dot{width:16px;height:16px}
+.tinfo{min-width:0}
+.tnm{font-size:14px;font-weight:800;white-space:nowrap}
+.thrower{font-size:10px;opacity:.75;margin-top:1px;white-space:nowrap}
+.bbar{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.bbar i{display:block;height:100%;background:linear-gradient(90deg,#3bc9db,#69db7c);transition:width .3s}
+.bbar i.hot{background:linear-gradient(90deg,#ffd43b,#ff922b)}
+.tleft{font-size:13px;font-weight:800;color:var(--accent);white-space:nowrap}
+#padGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.numBtn{height:clamp(50px,7.2vh,66px);border-radius:16px;background:linear-gradient(180deg,var(--wood1),var(--wood2) 60%,var(--wood3));border:2px solid #5d3a1c;color:var(--cream);font-size:clamp(20px,3.2vh,27px);font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.6),0 -1px 0 rgba(255,255,255,.2);box-shadow:0 4px 0 #4a2d14,0 8px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,223,158,.4)}
+.numBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #4a2d14,0 3px 8px rgba(0,0,0,.5)}
+#missBtn{width:100%;margin-top:10px;height:50px;border-radius:16px;background:linear-gradient(180deg,#5b6b78,#39434e);border:2px solid #232a31;color:#ffd9d4;font-size:17px;font-weight:900;box-shadow:0 4px 0 #1c2228,0 8px 14px rgba(0,0,0,.5)}
+#missBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #1c2228}
+#endScreen{z-index:50;background:rgba(8,19,14,.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center}
+#confetti{position:absolute;inset:0;width:100%;height:100%}
+.endInner{position:relative;width:min(92vw,480px);max-height:100%;overflow-y:auto;padding:24px 18px calc(env(safe-area-inset-bottom,0px) + 18px)}
+.endBig{font-size:30px;font-weight:900;text-align:center;text-shadow:0 0 22px rgba(255,200,97,.5),0 3px 8px rgba(0,0,0,.7);margin-bottom:4px}
+.endSub{text-align:center;font-size:13px;opacity:.8;margin-bottom:16px}
+.stRow{display:flex;align-items:center;gap:10px;background:rgba(15,44,33,.85);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.stRow.win{border-color:#ffd43b88;box-shadow:0 0 18px rgba(255,212,59,.25)}
+.rk{font-size:20px;width:28px;text-align:center;flex:none}
+.smid{flex:1;min-width:0}
+.stRow .nm{font-size:14px;font-weight:800}
+.stRow .sc{font-size:26px;color:var(--accent);text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.meta{font-size:10px;opacity:.65;margin-top:2px}
+#endScreen .ghostBtn,#endScreen .primaryBtn{margin-top:8px;margin-bottom:0}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:60}
+.pop{position:absolute;left:50%;top:32%;transform:translateX(-50%);font-weight:900;font-size:28px;text-align:center;white-space:nowrap;animation:floatUp 1.1s ease-out forwards;text-shadow:0 3px 10px rgba(0,0,0,.8)}
+.pop.good{color:#7be495}
+.pop.warn{color:var(--warn)}
+.pop.bad{color:var(--danger)}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,14px) scale(.7)}15%{opacity:1;transform:translate(-50%,0) scale(1.08)}30%{transform:translate(-50%,-6px) scale(1)}100%{opacity:0;transform:translate(-50%,-70px) scale(.95)}}
+</style>
+</head>
+<body data-gcn-state="title">
+
+<section id="setupScreen">
+  <div class="setupScroll">
+    <div class="setupInner">
+      <div class="pins" aria-hidden="true">
+        <span class="pin" style="--r:-10deg;--d:0s">4</span>
+        <span class="pin tall" style="--r:6deg;--d:.25s">12</span>
+        <span class="pin" style="--r:-3deg;--d:.1s">7</span>
+        <span class="pin tall" style="--r:9deg;--d:.35s">1</span>
+        <span class="pin" style="--r:-7deg;--d:.18s">10</span>
+      </div>
+      <h1 id="ttl" data-gcn-title>モルック スコアボード</h1>
+      <p class="tag">ちょうど50点を目指せ！得点記録はこの表におまかせ</p>
+      <div class="ruleRow">
+        <div><span class="rl">3連続0点で失格</span><span class="rd">OFFのときは失格にならずゲーム継続</span></div>
+        <button id="ruleToggle" type="button" class="switch on"><span class="knob"></span><span class="swTxt">ON</span></button>
+      </div>
+      <div id="teamList">
+        <div class="teamCard">
+          <div class="teamHead">
+            <span class="dot"></span>
+            <input type="text" class="tname" maxlength="12" placeholder="チーム名">
+            <button type="button" class="tdel">✕</button>
+          </div>
+          <div class="memberRows">
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+          </div>
+          <button type="button" class="madd">＋ メンバーを追加</button>
+        </div>
+        <div class="teamCard">
+          <div class="teamHead">
+            <span class="dot"></span>
+            <input type="text" class="tname" maxlength="12" placeholder="チーム名">
+            <button type="button" class="tdel">✕</button>
+          </div>
+          <div class="memberRows">
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+          </div>
+          <button type="button" class="madd">＋ メンバーを追加</button>
+        </div>
+        <div class="teamCard">
+          <div class="teamHead">
+            <span class="dot"></span>
+            <input type="text" class="tname" maxlength="12" placeholder="チーム名">
+            <button type="button" class="tdel">✕</button>
+          </div>
+          <div class="memberRows">
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+          </div>
+          <button type="button" class="madd">＋ メンバーを追加</button>
+        </div>
+        <div class="teamCard">
+          <div class="teamHead">
+            <span class="dot"></span>
+            <input type="text" class="tname" maxlength="12" placeholder="チーム名">
+            <button type="button" class="tdel">✕</button>
+          </div>
+          <div class="memberRows">
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+          </div>
+          <button type="button" class="madd">＋ メンバーを追加</button>
+        </div>
+      </div>
+      <p class="rules">ルール：倒したピンが1本ならその数字、複数なら本数が得点。合計がちょうど50点で勝利、51点以上は25点に戻る。</p>
+    </div>
+  </div>
+  <div class="setupFoot">
+    <button id="addTeam" type="button" class="ghostBtn">＋ チームを追加（最大4）</button>
+    <button id="startBtn" type="button" class="primaryBtn">ゲーム開始</button>
+  </div>
+</section>
+
+<section id="gameScreen" hidden>
+  <header id="topbar">
+    <button id="undoBtn" type="button" class="iconBtn">↺</button>
+    <div id="throwCount">投了 0</div>
+    <button id="muteBtn" type="button" class="iconBtn">🔊</button>
+    <button id="quitBtn" type="button" class="iconBtn">✕</button>
+  </header>
+  <div id="sheetWrap"></div>
+  <div id="pad">
+    <div id="turnBanner"></div>
+    <div id="padGrid">
+      <button type="button" class="numBtn">1</button>
+      <button type="button" class="numBtn">2</button>
+      <button type="button" class="numBtn">3</button>
+      <button type="button" class="numBtn">4</button>
+      <button type="button" class="numBtn">5</button>
+      <button type="button" class="numBtn">6</button>
+      <button type="button" class="numBtn">7</button>
+      <button type="button" class="numBtn">8</button>
+      <button type="button" class="numBtn">9</button>
+      <button type="button" class="numBtn">10</button>
+      <button type="button" class="numBtn">11</button>
+      <button type="button" class="numBtn">12</button>
+    </div>
+    <button id="missBtn" type="button">ミス（0点）</button>
+  </div>
+</section>
+
+<section id="endScreen" hidden>
+  <canvas id="confetti"></canvas>
+  <div class="endInner">
+    <div id="endTitle"></div>
+    <div id="standings"></div>
+    <button id="undoEndBtn" type="button" class="ghostBtn">↺ 一手戻す</button>
+    <button id="rematchBtn" type="button" class="primaryBtn">もう一度対戦</button>
+    <button id="toSetupBtn" type="button" class="ghostBtn">チーム設定に戻る</button>
+  </div>
+</section>
+
+<div id="fx"></div>
+
+<script>
+(function(){
+"use strict";
+function $(id){return document.getElementById(id);}
+var body=document.body;
+var PALETTE=["#ff6b6b","#ffd43b","#4dabf7","#69db7c"];
+
+var S={
+  screen:"setup",
+  ruleElim:true,
+  teamsSetup:[
+    {name:"チーム1",members:["","","",""],mcount:1},
+    {name:"チーム2",members:["","","",""],mcount:1}
+  ],
+  teams:[],
+  turn:0,winner:-1,winKind:"",throws:0,undo:[],muted:false,last:null
+};
+
+function save(){
+  try{
+    GCN.save(JSON.stringify({
+      screen:S.screen,ruleElim:S.ruleElim,teamsSetup:S.teamsSetup,
+      teams:S.teams,turn:S.turn,winner:S.winner,winKind:S.winKind,
+      throws:S.throws,muted:S.muted,last:S.last
+    }));
+  }catch(e){}
+}
+
+function normSetup(a){
+  var out=[],i,j;
+  if(a&&a.length){
+    for(i=0;i<Math.min(4,a.length);i++){
+      var s=a[i]||{};
+      var mem=["","","",""];
+      if(s.members)for(j=0;j<4;j++)mem[j]=typeof s.members[j]==="string"?s.members[j]:"";
+      var mc=typeof s.mcount==="number"?Math.max(0,Math.min(4,s.mcount|0)):1;
+      out.push({name:typeof s.name==="string"?s.name:("チーム"+(i+1)),members:mem,mcount:mc});
+    }
+  }
+  if(!out.length){
+    out=[
+      {name:"チーム1",members:["","","",""],mcount:1},
+      {name:"チーム2",members:["","","",""],mcount:1}
+    ];
+  }
+  return out;
+}
+
+GCN.onInit=function(sd){
+  var d=sd;
+  if(typeof d==="string"){try{d=JSON.parse(d);}catch(e){d=null;}}
+  if(d&&typeof d==="object"){
+    if(d.screen==="setup"||d.screen==="game"||d.screen==="end")S.screen=d.screen;
+    S.teamsSetup=normSetup(d.teamsSetup);
+    if(typeof d.ruleElim==="boolean")S.ruleElim=d.ruleElim;
+    if(d.teams&&d.teams.length)S.teams=d.teams;
+    if(typeof d.turn==="number")S.turn=d.turn;
+    if(typeof d.winner==="number")S.winner=d.winner;
+    if(typeof d.winKind==="string")S.winKind=d.winKind;
+    if(typeof d.throws==="number")S.throws=d.throws;
+    S.muted=!!d.muted;S.last=d.last||null;
+  }
+  render();
+};
+
+var ac=null,AC=window.AudioContext||window.webkitAudioContext;
+function unlockAudio(){
+  try{
+    if(!ac&&AC)ac=new AC();
+    if(ac&&ac.state==="suspended"){var pr=ac.resume();if(pr&&pr.catch)pr.catch(function(){});}
+  }catch(e){ac=null;}
+}
+function tone(f,dur,type,vol,delay,slide){
+  if(!ac||S.muted)return;
+  try{
+    var t0=ac.currentTime+(delay||0);
+    var o=ac.createOscillator(),g=ac.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t0);
+    if(slide)o.frequency.exponentialRampToValueAtTime(slide,t0+dur);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(vol,t0+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g);g.connect(ac.destination);
+    o.start(t0);o.stop(t0+dur+0.05);
+  }catch(e){}
+}
+function sfxScore(v){tone(300+v*22,0.09,"triangle",0.16);tone(450+v*22,0.13,"sine",0.1,0.045);}
+function sfxMiss(){tone(140,0.16,"sine",0.2,0,85);}
+function sfxBust(){tone(420,0.3,"sawtooth",0.11,0,140);tone(210,0.3,"triangle",0.1,0.06,90);}
+function sfxElim(){tone(300,0.14,"square",0.09,0,200);tone(200,0.22,"square",0.09,0.14,110);}
+function sfxTick(){tone(660,0.05,"sine",0.09);}
+function sfxWin(){var n=[523,659,784,1047,1319];for(var i=0;i<n.length;i++)tone(n[i],0.16,"triangle",0.14,i*0.11);}
+
+window.addEventListener("pointerdown",unlockAudio);
+window.addEventListener("touchstart",unlockAudio,{passive:false});
+
+function tap(el,fn){
+  var last=0;
+  function go(){var n=Date.now();if(n-last<140)return;last=n;fn();}
+  el.addEventListener("pointerdown",function(){go();});
+  el.addEventListener("touchstart",function(e){e.preventDefault();go();},{passive:false});
+  el.addEventListener("click",function(){if(window.PointerEvent)return;go();});
+}
+
+function popup(txt,cls){
+  var fx=$("fx");
+  var d=document.createElement("div");
+  d.className="pop "+(cls||"good");
+  d.textContent=txt;
+  fx.appendChild(d);
+  d.addEventListener("animationend",function(){if(d.parentNode)d.parentNode.removeChild(d);});
+}
+
+function mems(t){return t.members||[];}
+function countZero(h){var n=0;for(var i=0;i<h.length;i++)if(h[i]===0)n++;return n;}
+
+function pushUndo(){
+  try{
+    S.undo.push(JSON.stringify({teams:S.teams,turn:S.turn,winner:S.winner,winKind:S.winKind,throws:S.throws,last:S.last}));
+    if(S.undo.length>300)S.undo.shift();
+  }catch(e){}
+}
+
+function undoThrow(){
+  if(!S.undo.length)return;
+  var s;
+  try{s=JSON.parse(S.undo.pop());}catch(e){return;}
+  S.teams=s.teams;S.turn=s.turn;S.winner=s.winner;S.winKind=s.winKind;S.throws=s.throws;S.last=s.last||null;
+  S.screen="game";
+  stopConfetti();
+  sfxTick();
+  save();render();
+}
+
+function advanceTurn(){
+  var n=S.teams.length;
+  for(var i=1;i<=n;i++){var k=(S.turn+i)%n;if(!S.teams[k].elim){S.turn=k;return;}}
+}
+
+function doThrow(v){
+  if(S.screen!=="game")return;
+  var ti=S.turn,t=S.teams[ti];
+  if(!t||t.elim)return;
+  pushUndo();
+  S.throws++;
+  t.hist.push(v);
+  S.last={ti:ti,idx:t.hist.length-1};
+  var msg,cls;
+  if(v===0){
+    t.misses++;
+    if(S.ruleElim&&t.misses>=3){
+      t.elim=true;msg=t.name+" 失格！";cls="bad";
+    }else{
+      msg=S.ruleElim?("ミス "+t.misses+"/3"):("ミス（"+t.misses+"連続）");cls="warn";
+    }
+  }else{
+    t.misses=0;
+    var ns=t.score+v;
+    if(ns>50){t.score=25;t.busts++;msg="バースト！25点へ";cls="bad";}
+    else{t.score=ns;msg="+"+v;cls="good";}
+  }
+  if(t.score===50&&!t.elim){
+    S.winner=ti;S.winKind="exact";S.screen="end";
+  }else if(t.elim){
+    var best=-1,bestScore=-1;
+    for(var i=0;i<S.teams.length;i++){
+      var q=S.teams[i];
+      if(!q.elim&&q.score>bestScore){bestScore=q.score;best=i;}
+    }
+    if(best>=0&&S.teams.length>1){S.winner=best;S.winKind="elimwin";}
+    else{S.winner=-1;S.winKind="elimlose";}
+    S.screen="end";
+  }else{
+    advanceTurn();
+  }
+  popup(msg,cls);
+  try{
+    if(S.screen==="end"){if(S.winner>=0)sfxWin();else sfxElim();}
+    else if(v===0)sfxMiss();
+    else if(cls==="bad")sfxBust();
+    else sfxScore(v);
+  }catch(e){}
+  var lead=0;
+  for(var j=0;j<S.teams.length;j++)lead=Math.max(lead,S.teams[j].score);
+  try{GCN.score(lead);}catch(e){}
+  save();
+  render();
+}
+
+function startGame(){
+  var ts=[],i,j;
+  for(i=0;i<S.teamsSetup.length;i++){
+    var s=S.teamsSetup[i];
+    var nm=(s.name||"").trim()||("チーム"+(i+1));
+    var mem=[];
+    for(j=0;j<s.mcount;j++){
+      var m=(s.members[j]||"").trim();
+      if(m)mem.push(m);
+    }
+    ts.push({name:nm,members:mem,ci:i%4,score:0,misses:0,elim:false,hist:[],busts:0});
+  }
+  if(!ts.length)ts=[{name:"チーム1",members:[],ci:0,score:0,misses:0,elim:false,hist:[],busts:0}];
+  S.teams=ts;S.turn=0;S.winner=-1;S.winKind="";S.throws=0;S.undo=[];S.last=null;
+  S.screen="game";
+  save();render();sfxTick();
+}
+
+function rematch(){
+  for(var i=0;i<S.teams.length;i++){
+    var t=S.teams[i];
+    t.score=0;t.misses=0;t.elim=false;t.hist=[];t.busts=0;
+  }
+  S.turn=0;S.winner=-1;S.winKind="";S.throws=0;S.undo=[];S.last=null;
+  S.screen="game";
+  stopConfetti();
+  save();render();sfxTick();
+}
+
+function toSetup(){
+  S.screen="setup";S.winner=-1;S.winKind="";
+  stopConfetti();
+  save();render();
+}
+
+var quitArm=false,quitTimer=0;
+function quitTap(){
+  var b=$("quitBtn");
+  if(!quitArm){
+    quitArm=true;b.textContent="終了？";b.className="iconBtn arm";
+    quitTimer=setTimeout(function(){quitArm=false;b.textContent="✕";b.className="iconBtn";},2400);
+    return;
+  }
+  clearTimeout(quitTimer);quitArm=false;b.textContent="✕";b.className="iconBtn";
+  toSetup();
+}
+
+function render(){
+  if(S.screen!=="setup"&&!S.teams.length)S.screen="setup";
+  body.dataset.gcnState=S.screen==="setup"?"title":(S.screen==="game"?"playing":"ended");
+  $("setupScreen").hidden=S.screen!=="setup";
+  $("gameScreen").hidden=S.screen!=="game";
+  $("endScreen").hidden=S.screen!=="end";
+  if(S.screen!=="end")stopConfetti();
+  if(S.screen==="setup")renderSetup();
+  else if(S.screen==="game")renderGame();
+  else renderEnd();
+}
+
+function renderSetup(){
+  var cards=$("teamList").children;
+  for(var i=0;i<4;i++){
+    var card=cards[i],ts=S.teamsSetup[i];
+    if(!ts){card.hidden=true;continue;}
+    card.hidden=false;
+    card.style.borderLeftColor=PALETTE[i%4];
+    card.querySelector(".dot").style.background=PALETTE[i%4];
+    var tn=card.querySelector(".tname");
+    if(tn.value!==ts.name)tn.value=ts.name;
+    card.querySelector(".tdel").hidden=S.teamsSetup.length<=1;
+    var mrows=card.querySelector(".memberRows").children;
+    for(var j=0;j<4;j++){
+      var mr=mrows[j];
+      if(j<ts.mcount){
+        mr.hidden=false;
+        var mi=mr.querySelector(".mname");
+        if(mi.value!==ts.members[j])mi.value=ts.members[j];
+      }else mr.hidden=true;
+    }
+    card.querySelector(".madd").style.opacity=ts.mcount>=4?0.35:1;
+  }
+  $("addTeam").style.opacity=S.teamsSetup.length>=4?0.35:1;
+  var rt=$("ruleToggle");
+  rt.className="switch"+(S.ruleElim?" on":"");
+  rt.querySelector(".swTxt").textContent=S.ruleElim?"ON":"OFF";
+}
+
+function renderGame(){
+  if(S.turn>=S.teams.length)S.turn=0;
+  $("throwCount").textContent="投了 "+S.throws;
+  $("undoBtn").style.opacity=S.undo.length?1:0.35;
+  $("muteBtn").textContent=S.muted?"🔇":"🔊";
+  buildSheet();buildBanner();
+}
+
+function buildBanner(){
+  var b=$("turnBanner");b.textContent="";
+  var t=S.teams[S.turn];if(!t)return;
+  var dot=document.createElement("i");dot.className="dot";
+  dot.style.background=PALETTE[t.ci%4];
+  dot.style.boxShadow="0 0 10px "+PALETTE[t.ci%4];
+  b.appendChild(dot);
+  var info=document.createElement("div");info.className="tinfo";
+  var l1=document.createElement("div");l1.className="tnm";l1.textContent=t.name+" の番";
+  info.appendChild(l1);
+  var mm=mems(t);
+  if(mm.length){
+    var l2=document.createElement("div");l2.className="thrower";
+    l2.textContent="投手: "+mm[t.hist.length%mm.length];
+    info.appendChild(l2);
+  }
+  b.appendChild(info);
+  var bw=document.createElement("div");bw.className="bbar";
+  var bf=document.createElement("i");bf.style.width=Math.min(100,t.score*2)+"%";
+  if(t.score>=40)bf.className="hot";
+  bw.appendChild(bf);b.appendChild(bw);
+  var left=document.createElement("div");left.className="tleft";
+  left.textContent="あと "+(50-t.score);
+  b.appendChild(left);
+}
+
+function buildSheet(){
+  var wrap=$("sheetWrap");wrap.textContent="";
+  var tbl=document.createElement("table");tbl.id="sheet";
+  var maxHist=0,i;
+  for(i=0;i<S.teams.length;i++)maxHist=Math.max(maxHist,S.teams[i].hist.length);
+  var cols=Math.max(1,maxHist+(S.screen==="game"?1:0));
+  var thead=document.createElement("thead");
+  var trh=document.createElement("tr");
+  var th0=document.createElement("th");th0.className="pcol c0";th0.textContent="チーム";
+  trh.appendChild(th0);
+  for(i=0;i<cols;i++){var th=document.createElement("th");th.textContent=i+1;trh.appendChild(th);}
+  thead.appendChild(trh);tbl.appendChild(thead);
+  var tb=document.createElement("tbody");
+  S.teams.forEach(function(t,ti){
+    var tr=document.createElement("tr");
+    if(ti===S.turn&&S.screen==="game"&&!t.elim)tr.className="cur";
+    if(t.elim)tr.className="out";
+    var pc=document.createElement("th");pc.className="pcol c0";
+    var l1=document.createElement("div");l1.className="pn";
+    var dot=document.createElement("i");dot.className="dot";dot.style.background=PALETTE[t.ci%4];
+    l1.appendChild(dot);
+    var nm=document.createElement("span");nm.textContent=t.name;l1.appendChild(nm);
+    if(t.elim){var em=document.createElement("em");em.className="outTag";em.textContent="失格";l1.appendChild(em);}
+    pc.appendChild(l1);
+    var mm=mems(t);
+    if(mm.length){
+      var lm=document.createElement("div");lm.className="mem";lm.textContent=mm.join("・");
+      pc.appendChild(lm);
+    }
+    var l2=document.createElement("div");l2.className="pinfo";
+    var sc=document.createElement("b");sc.textContent=t.score;l2.appendChild(sc);
+    var miss=document.createElement("span");
+    var mt="",m;
+    for(m=0;m<3;m++)mt+=m<t.misses?"●":"○";
+    miss.textContent=mt;
+    miss.className="miss"+(t.misses>0?" m"+Math.min(t.misses,3):"");
+    l2.appendChild(miss);
+    pc.appendChild(l2);
+    var l3=document.createElement("div");l3.className="pbar";
+    var fill=document.createElement("i");fill.style.width=Math.min(100,t.score*2)+"%";
+    if(t.score>=40)fill.className="hot";
+    l3.appendChild(fill);pc.appendChild(l3);
+    tr.appendChild(pc);
+    var run=0;
+    for(var k=0;k<cols;k++){
+      var td=document.createElement("td");
+      if(k<t.hist.length){
+        var v=t.hist[k],bust=false;
+        if(v!==0){if(run+v>50){run=25;bust=true;}else run+=v;}
+        var dv=document.createElement("div");dv.className="v";dv.textContent=v===0?"–":v;
+        var dc=document.createElement("div");dc.className="c";dc.textContent=run;
+        td.appendChild(dv);td.appendChild(dc);
+        var cls="";
+        if(v===0)cls="zero";
+        if(bust)cls=cls?cls+" bust":"bust";
+        if(S.last&&S.last.ti===ti&&S.last.idx===k)cls=cls?cls+" last":"last";
+        if(cls)td.className=cls;
+      }else if(S.screen==="game"&&ti===S.turn&&k===t.hist.length&&!t.elim){
+        td.className="next";
+      }
+      tr.appendChild(td);
+    }
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  wrap.appendChild(tbl);
+  wrap.scrollLeft=wrap.scrollWidth;
+}
+
+function renderEnd(){
+  var t=$("endTitle");t.textContent="";
+  var big=document.createElement("div");big.className="endBig";
+  var sub=document.createElement("div");sub.className="endSub";
+  var elimName="",i;
+  for(i=0;i<S.teams.length;i++)if(S.teams[i].elim)elimName=S.teams[i].name;
+  if(S.winner>=0){
+    var w=S.teams[S.winner];
+    big.textContent="🏆 "+w.name;
+    sub.textContent=S.winKind==="exact"?"50点ちょうどで勝利！":(elimName+" の失格により勝利！");
+    t.appendChild(big);t.appendChild(sub);
+    startConfetti();
+  }else{
+    big.textContent="失格…";
+    sub.textContent="3連続0点でゲーム終了";
+    t.appendChild(big);t.appendChild(sub);
+    stopConfetti();
+  }
+  var st=$("standings");st.textContent="";
+  var order=S.teams.map(function(q,idx){return{t:q,i:idx};}).sort(function(a,b){
+    if(a.t.elim!==b.t.elim)return a.t.elim?1:-1;
+    return b.t.score-a.t.score;
+  });
+  order.forEach(function(o,r){
+    var q=o.t;
+    var row=document.createElement("div");row.className="stRow"+(o.i===S.winner?" win":"");
+    var rk=document.createElement("span");rk.className="rk";
+    rk.textContent=q.elim?"✕":(r===0?"🥇":r===1?"🥈":r===2?"🥉":String(r+1));
+    row.appendChild(rk);
+    var dot=document.createElement("i");dot.className="dot";dot.style.background=PALETTE[q.ci%4];
+    row.appendChild(dot);
+    var mid=document.createElement("div");mid.className="smid";
+    var nl=document.createElement("div");nl.className="nm";nl.textContent=q.name;
+    if(q.elim){var em=document.createElement("em");em.className="outTag";em.textContent="失格";nl.appendChild(em);}
+    mid.appendChild(nl);
+    var mm=mems(q);
+    if(mm.length){
+      var mb=document.createElement("div");mb.className="mem";mb.textContent=mm.join("・");
+      mid.appendChild(mb);
+    }
+    var meta=document.createElement("div");meta.className="meta";
+    meta.textContent="ターン数 "+q.hist.length+" ・ ミス "+countZero(q.hist)+" ・ バースト "+q.busts;
+    mid.appendChild(meta);
+    row.appendChild(mid);
+    var sc=document.createElement("b");sc.className="sc";sc.textContent=q.score;
+    row.appendChild(sc);
+    st.appendChild(row);
+  });
+  $("undoEndBtn").style.opacity=S.undo.length?1:0.35;
+}
+
+var cfOn=false,cfId=0,cfPs=[],cfCv=null,cfCtx=null;
+function sizeConfetti(){var d=Math.min(devicePixelRatio||1,2);cfCv.width=innerWidth*d|0;cfCv.height=innerHeight*d|0;}
+function newCf(any){
+  return {x:Math.random()*innerWidth,y:any?Math.random()*innerHeight:-20-Math.random()*60,
+    vy:1.2+Math.random()*2.4,vx:(Math.random()-0.5)*1.2,r:Math.random()*6.283,vr:(Math.random()-0.5)*0.2,
+    w:5+Math.random()*7,h:8+Math.random()*10,c:PALETTE[(Math.random()*PALETTE.length)|0]};
+}
+function startConfetti(){
+  if(cfOn)return;cfOn=true;
+  cfCv=$("confetti");cfCtx=cfCv.getContext("2d");
+  sizeConfetti();cfPs=[];
+  for(var i=0;i<140;i++)cfPs.push(newCf(true));
+  cfId=requestAnimationFrame(cfFrame);
+}
+function stopConfetti(){
+  cfOn=false;
+  if(cfId)cancelAnimationFrame(cfId);cfId=0;
+  if(cfCtx&&cfCv)cfCtx.clearRect(0,0,cfCv.width,cfCv.height);
+}
+function cfFrame(){
+  if(!cfOn)return;
+  cfId=requestAnimationFrame(cfFrame);
+  var d=Math.min(devicePixelRatio||1,2);
+  cfCtx.setTransform(d,0,0,d,0,0);
+  cfCtx.clearRect(0,0,innerWidth,innerHeight);
+  for(var i=0;i<cfPs.length;i++){
+    var p=cfPs[i];
+    p.y+=p.vy;p.x+=p.vx+Math.sin(p.r*3)*0.4;p.r+=p.vr;
+    if(p.y>innerHeight+20){cfPs[i]=newCf(false);continue;}
+    cfCtx.save();cfCtx.translate(p.x,p.y);cfCtx.rotate(p.r);
+    cfCtx.fillStyle=p.c;cfCtx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    cfCtx.restore();
+  }
+}
+window.addEventListener("resize",function(){if(cfOn)sizeConfetti();});
+
+(function wireSetup(){
+  var cards=$("teamList").children;
+  for(var i=0;i<4;i++){
+    (function(ti){
+      var card=cards[ti];
+      var tn=card.querySelector(".tname");
+      tn.addEventListener("input",function(){
+        if(S.teamsSetup[ti]){S.teamsSetup[ti].name=tn.value;save();}
+      });
+      tap(card.querySelector(".tdel"),function(){
+        if(S.teamsSetup.length<=1)return;
+        S.teamsSetup.splice(ti,1);save();renderSetup();sfxTick();
+      });
+      var mrows=card.querySelector(".memberRows").children;
+      for(var j=0;j<4;j++){
+        (function(mi){
+          var mr=mrows[mi];
+          var inp=mr.querySelector(".mname");
+          inp.addEventListener("input",function(){
+            var ts=S.teamsSetup[ti];if(!ts)return;
+            ts.members[mi]=inp.value;save();
+          });
+          tap(mr.querySelector(".mdel"),function(){
+            var ts=S.teamsSetup[ti];if(!ts||ts.mcount<=0)return;
+            ts.members.splice(mi,1);ts.members.push("");ts.mcount--;
+            save();renderSetup();sfxTick();
+          });
+        })(j);
+      }
+      tap(card.querySelector(".madd"),function(){
+        var ts=S.teamsSetup[ti];if(!ts||ts.mcount>=4)return;
+        ts.mcount++;save();renderSetup();sfxTick();
+      });
+    })(i);
+  }
+})();
+
+(function wirePad(){
+  var btns=$("padGrid").children;
+  for(var i=0;i<12;i++){
+    (function(v){
+      tap(btns[v-1],function(){doThrow(v);});
+    })(i+1);
+  }
+})();
+
+tap($("missBtn"),function(){doThrow(0);});
+tap($("undoBtn"),undoThrow);
+tap($("undoEndBtn"),undoThrow);
+tap($("muteBtn"),function(){
+  S.muted=!S.muted;
+  $("muteBtn").textContent=S.muted?"🔇":"🔊";
+  save();if(!S.muted)sfxTick();
+});
+tap($("quitBtn"),quitTap);
+tap($("addTeam"),function(){
+  if(S.teamsSetup.length>=4)return;
+  var n=S.teamsSetup.length+1;
+  S.teamsSetup.push({name:"チーム"+n,members:["","","",""],mcount:1});
+  save();renderSetup();sfxTick();
+});
+tap($("startBtn"),startGame);
+tap($("rematchBtn"),rematch);
+tap($("toSetupBtn"),toSetup);
+tap($("ruleToggle"),function(){
+  S.ruleElim=!S.ruleElim;save();renderSetup();sfxTick();
+});
+
+render();
+})();
+</script>
+</body>
+</html>
