@@ -1,16 +1,16 @@
 {
   "schema": 1,
   "gameId": "pf316qyoc7dg",
-  "title": "無題のゲーム",
+  "title": "モルックスコア表",
   "versionId": "f9b05d83-fd28-4ea2-8e27-ff008b32ecd2",
-  "snapshotAt": "2026-10-18T13:01:20.068Z",
+  "snapshotAt": "2026-10-18T13:19:51.472Z",
   "playUrl": "https://gcn-play.com/play/pf316qyoc7dg",
   "files": [
     {
       "path": "README.md",
       "mime": "text/markdown; charset=utf-8",
-      "bytes": 1868,
-      "sha256": "68e2128ddbd166477a211ba76ee0f116f49b44d8492b79b2d32a1c65a11b171a"
+      "bytes": 1874,
+      "sha256": "9ff803dcacaec3357a2da0b90f9fff1e18b341ab93319eec5c683cac84e99c76"
     },
     {
       "path": "index.html",
