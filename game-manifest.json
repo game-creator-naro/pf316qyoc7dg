@@ -2,8 +2,8 @@
   "schema": 1,
   "gameId": "pf316qyoc7dg",
   "title": "モルックスコア表",
-  "versionId": "f9b05d83-fd28-4ea2-8e27-ff008b32ecd2",
-  "snapshotAt": "2026-10-18T13:19:51.472Z",
+  "versionId": "dd685c69-4160-462d-a10e-de5f11d2ef9e",
+  "snapshotAt": "2026-10-21T14:24:57.802Z",
   "playUrl": "https://gcn-play.com/play/pf316qyoc7dg",
   "files": [
     {
@@ -15,8 +15,8 @@
     {
       "path": "index.html",
       "mime": "text/html; charset=utf-8",
-      "bytes": 66313,
-      "sha256": "409e3b9d1ff4fdcd3640d810efd530616b74420718c1aeccad6f20ed30fc91e3"
+      "bytes": 72481,
+      "sha256": "c3a34f7811f60795c50788d628f06860a5aea624ad7a0d707f9cdf1db36dd3e2"
     }
   ],
   "skipped": []

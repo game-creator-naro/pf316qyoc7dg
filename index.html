@@ -487,19 +487,20 @@ section{position:fixed;inset:0;display:flex;flex-direction:column;animation:fade
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
 button{font-family:inherit;cursor:pointer}
 input:focus{outline:none;border-color:#ffd43b88!important}
-.setupScroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.setupScroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .setupInner{max-width:560px;width:100%;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 14px}
 .pins{display:flex;gap:10px;align-items:flex-end;justify-content:center;height:84px}
 .pin{width:32px;height:64px;border-radius:11px 11px 8px 8px;background:linear-gradient(90deg,#8a5a2e,#d9a05f 30%,#e8bd84 50%,#b97f43 75%,#7a4c24);border:2px solid #5d3a1c;box-shadow:0 6px 10px rgba(0,0,0,.5),inset 0 -6px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:var(--cream);font-weight:900;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.7);transform:rotate(var(--r));animation:sway 3.2s ease-in-out var(--d) infinite}
 .pin.tall{height:78px}
 @keyframes sway{50%{transform:rotate(calc(var(--r) + 3deg)) translateY(-4px)}}
 #ttl{text-align:center;font-size:clamp(26px,7.5vw,38px);line-height:1.2;margin:4px 0 2px;text-shadow:0 0 24px rgba(255,200,97,.45),0 3px 8px rgba(0,0,0,.6);letter-spacing:.04em}
-.tag{text-align:center;font-size:13px;opacity:.78;margin-bottom:14px}
+.tag{text-align:center;font-size:13px;opacity:.78;margin-bottom:6px}
+.ruleSummary{text-align:center;font-size:12px;line-height:18px;color:#ffc861;margin-bottom:12px}
 .ruleRow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(15,44,33,.8);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:10px 14px;margin-bottom:12px}
 .rl{font-size:14px;font-weight:800;display:block}
 .rd{font-size:11px;opacity:.65;display:block;margin-top:2px}
-.switch{position:relative;width:70px;height:36px;border-radius:18px;border:2px solid rgba(255,255,255,.16);background:#3a4a42;color:#cfe0d6;font-weight:800;font-size:13px;flex:none;transition:background .15s}
-.switch .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.5);transition:left .15s}
+.switch{position:relative;width:70px;height:44px;border-radius:22px;border:2px solid rgba(255,255,255,.16);background:#3a4a42;color:#cfe0d6;font-weight:800;font-size:13px;flex:none;transition:background .15s}
+.switch .knob{position:absolute;top:50%;transform:translateY(-50%);left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.5);transition:left .15s}
 .switch.on{background:#57c785;color:#123527;border-color:#9fe8bd}
 .switch.on .knob{left:37px}
 .swTxt{position:absolute;top:50%;transform:translateY(-50%);right:11px}
@@ -510,40 +511,49 @@ input:focus{outline:none;border-color:#ffd43b88!important}
 .tname{flex:1;min-width:0;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.13);border-radius:12px;color:var(--cream);padding:10px 12px;font-size:16px;font-weight:700}
 .mRow{display:flex;gap:8px;margin-top:8px;padding-left:26px}
 .mname{flex:1;min-width:0;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);border-radius:10px;color:var(--cream);padding:9px 12px;font-size:16px}
-.mdel,.tdel{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.06);color:#ffb4ab;font-size:16px;flex:none;border:0}
-.madd{margin:10px 0 0 26px;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.27);color:var(--cream);border-radius:10px;padding:8px 12px;font-size:13px}
+.mdel,.tdel{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.06);color:#ffb4ab;font-size:16px;flex:none;border:0}
+.madd{min-height:44px;margin:10px 0 0 26px;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.27);color:var(--cream);border-radius:10px;padding:8px 12px;font-size:13px}
 .rules{font-size:11px;opacity:.55;text-align:center;line-height:1.6;padding:4px 6px 10px}
-.setupFoot{padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 12px);background:linear-gradient(180deg,rgba(10,31,23,0),#0a1f17 45%)}
+.setupFoot{padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 32px);background:linear-gradient(180deg,rgba(10,31,23,0),#0a1f17 45%)}
 .ghostBtn{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);color:var(--cream);border-radius:14px;padding:13px;font-size:15px;font-weight:700;margin-bottom:10px}
 .primaryBtn{width:100%;background:linear-gradient(180deg,#ffd98a,#f0a93c 55%,#d18a2a);color:#4a2c10;font-weight:900;font-size:20px;border:2px solid #8a5a1d;border-radius:18px;padding:16px;box-shadow:0 5px 0 #7c4d16,0 10px 22px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.6);letter-spacing:.06em}
 .primaryBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #7c4d16,0 4px 10px rgba(0,0,0,.6)}
-#topbar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px}
+#topbar{flex:none;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
 #throwCount{flex:1;text-align:center;font-size:13px;font-weight:700;opacity:.8}
-.iconBtn{min-width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:var(--cream);font-size:19px;font-weight:800}
+.iconBtn{min-width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:var(--cream);font-size:19px;font-weight:800}
+#undoBtn{width:100%;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1}
+#undoBtn .undoLabel{font-size:12px;line-height:14px}
+#undoBtn:disabled{opacity:.35;cursor:default}
+#undoBtn:disabled:active{transform:none}
+#muteBtn{width:44px;font-size:13px;white-space:nowrap}
 .iconBtn.arm{width:auto;padding:0 10px;background:#a33a2e;font-size:13px}
-#sheetWrap{flex:1;overflow:auto;margin:4px 10px 8px;border-radius:18px;background:linear-gradient(180deg,#1d4a37,#123326);box-shadow:inset 0 2px 12px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);-webkit-overflow-scrolling:touch}
-#sheet{border-collapse:separate;border-spacing:0;min-width:100%}
+#sheetWrap{flex:1;min-height:0;overflow:auto;margin:4px 10px 8px;border-radius:18px;background:linear-gradient(180deg,#1d4a37,#123326);box-shadow:inset 0 2px 12px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);-webkit-overflow-scrolling:touch}
+#sheet{height:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
 #sheet th,#sheet td{padding:5px 7px;text-align:center;border-bottom:1px solid rgba(255,255,255,.08);min-width:46px;font-weight:400}
-#sheet thead th{position:sticky;top:0;background:#0a231a;z-index:2;font-size:12px;opacity:.85;padding:8px 7px}
-#sheet .pcol{position:sticky;left:0;background:#0e2a1f;z-index:3;min-width:128px;max-width:128px;text-align:left;padding:8px 10px}
+#sheet thead th{height:34px;position:sticky;top:0;background:#0a231a;z-index:2;font-size:14px;opacity:.85;padding:8px 7px}
+#sheet .pcol{position:sticky;left:0;background:#0e2a1f;z-index:3;min-width:160px;max-width:160px;text-align:left;padding:8px 10px}
 #sheet thead .c0{z-index:5}
 #sheet tr.cur .pcol{box-shadow:inset 4px 0 0 var(--accent);background:#143527}
 #sheet tr.out .pcol{opacity:.55}
-.pn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
+#sheet tbody tr{height:112px}
+.pn{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800}
 .pn .dot{width:12px;height:12px}
-.pn span{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pn span{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .outTag{font-style:normal;font-size:9px;background:#a33a2e;color:#fff;border-radius:6px;padding:2px 5px;margin-left:4px}
-.mem{font-size:9px;opacity:.55;margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mem{font-size:16px;line-height:20px;color:#b8cabe;margin-top:2px;overflow-wrap:anywhere;white-space:normal}
+#sheet .mem{max-width:140px}
+#sheet thead .c0{padding:4px 10px}
+.histLegend{display:block;font-size:11px;line-height:13px;white-space:nowrap;color:#d2dfd6}
 .pinfo{display:flex;align-items:baseline;gap:8px;margin-top:3px}
-.pinfo b{font-size:24px;color:var(--accent);text-shadow:0 2px 6px rgba(0,0,0,.5)}
-.miss{font-size:10px;letter-spacing:2px;color:#ffffff33}
-.miss.m1,.miss.m2{color:var(--warn)}
+.pinfo b{font-size:44px;line-height:46px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--accent);text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.miss{font-size:12px;line-height:18px;white-space:nowrap;color:#b8cabe}
+.miss.m1{color:var(--accent)}
 .miss.m3{color:var(--danger)}
 .pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:5px;overflow:hidden}
 .pbar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#3bc9db,#69db7c);transition:width .3s}
 .pbar i.hot{background:linear-gradient(90deg,#ffd43b,#ff922b)}
-td .v{font-weight:800;font-size:15px}
-td .c{font-size:9px;opacity:.6}
+td .v{font-weight:800;font-size:24px;line-height:28px;font-variant-numeric:tabular-nums}
+td .c{font-size:13px;line-height:18px;opacity:.75;font-variant-numeric:tabular-nums}
 td.zero .v{color:#8fa39a}
 td.bust{background:rgba(255,146,43,.18)}
 td.bust .c{color:#ff922b;opacity:1}
@@ -551,20 +561,30 @@ td.last{background:rgba(255,212,59,.14)}
 td.next{position:relative}
 td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255,212,59,.5);border-radius:8px;animation:pulse 1.2s infinite}
 @keyframes pulse{50%{opacity:.3}}
-#pad{padding:6px 14px calc(env(safe-area-inset-bottom,0px) + 10px);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.35))}
-#turnBanner{display:flex;align-items:center;gap:10px;background:rgba(15,44,33,.85);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:8px 12px;margin-bottom:10px}
+#pad{flex:none;max-height:calc(100% - 110px);overflow-y:auto;padding:6px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 10px) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.35))}
+#turnBanner{position:relative;flex:none;min-height:56px;display:flex;align-items:center;gap:10px;background:rgba(15,44,33,.85);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:8px 12px;margin:4px 10px}
 #turnBanner .dot{width:16px;height:16px}
-.tinfo{min-width:0}
-.tnm{font-size:14px;font-weight:800;white-space:nowrap}
-.thrower{font-size:10px;opacity:.75;margin-top:1px;white-space:nowrap}
-.bbar{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.tinfo{min-width:0;flex:1}
+.tnm{line-height:18px;font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thrower{font-size:16px;line-height:20px;color:#b8cabe;white-space:normal;overflow-wrap:anywhere}
+.bbar{position:absolute;left:38px;right:12px;bottom:2px;height:3px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
 .bbar i{display:block;height:100%;background:linear-gradient(90deg,#3bc9db,#69db7c);transition:width .3s}
 .bbar i.hot{background:linear-gradient(90deg,#ffd43b,#ff922b)}
 .tleft{font-size:13px;font-weight:800;color:var(--accent);white-space:nowrap}
-#padGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.numBtn{height:clamp(50px,7.2vh,66px);border-radius:16px;background:linear-gradient(180deg,var(--wood1),var(--wood2) 60%,var(--wood3));border:2px solid #5d3a1c;color:var(--cream);font-size:clamp(20px,3.2vh,27px);font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.6),0 -1px 0 rgba(255,255,255,.2);box-shadow:0 4px 0 #4a2d14,0 8px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,223,158,.4)}
+#padGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.numBtn{height:44px;border-radius:12px;background:linear-gradient(180deg,var(--wood1),var(--wood2) 60%,var(--wood3));border:2px solid #5d3a1c;color:var(--cream);font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.6),0 -1px 0 rgba(255,255,255,.2);box-shadow:0 2px 0 #4a2d14,0 4px 8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,223,158,.4)}
 .numBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #4a2d14,0 3px 8px rgba(0,0,0,.5)}
-#missBtn{width:100%;margin-top:10px;height:50px;border-radius:16px;background:linear-gradient(180deg,#5b6b78,#39434e);border:2px solid #232a31;color:#ffd9d4;font-size:17px;font-weight:900;box-shadow:0 4px 0 #1c2228,0 8px 14px rgba(0,0,0,.5)}
+#missBtn{grid-column:span 2;width:100%;margin-top:0;height:44px;border-radius:12px;background:linear-gradient(180deg,#5b6b78,#39434e);border:2px solid #232a31;color:#ffd9d4;font-size:17px;font-weight:900;box-shadow:0 2px 0 #1c2228,0 4px 8px rgba(0,0,0,.5)}
+#missBtn .missValue{font-size:17px;line-height:18px}
+#missBtn .missLabel{font-size:12px;line-height:14px}
+#missBtn{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.miss{display:flex;flex-direction:column;gap:3px}
+.missRings{display:flex;gap:4px}
+.missRing{display:block;width:14px;height:14px;border:2px solid currentColor;border-radius:50%;position:relative}
+.missRing.used{border-color:transparent;opacity:.65}
+.missRing.used::before,.missRing.used::after{content:"";position:absolute;top:4px;left:-1px;width:12px;height:2px;background:currentColor;transform:rotate(45deg)}
+.missRing.used::after{transform:rotate(-45deg)}
+.miss.m2{color:var(--danger)}
 #missBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #1c2228}
 #endScreen{z-index:50;background:rgba(8,19,14,.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center}
 #confetti{position:absolute;inset:0;width:100%;height:100%}
@@ -601,6 +621,7 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
       </div>
       <h1 id="ttl" data-gcn-title>モルック スコアボード</h1>
       <p class="tag">ちょうど50点を目指せ！得点記録はこの表におまかせ</p>
+      <p class="ruleSummary">50点で勝利 ／ 超えると25点に戻る</p>
       <div class="ruleRow">
         <div><span class="rl">3連続0点で失格</span><span class="rd">OFFのときは失格にならずゲーム継続</span></div>
         <button id="ruleToggle" type="button" class="switch on"><span class="knob"></span><span class="swTxt">ON</span></button>
@@ -674,14 +695,13 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
 
 <section id="gameScreen" hidden>
   <header id="topbar">
-    <button id="undoBtn" type="button" class="iconBtn">↺</button>
-    <div id="throwCount">投了 0</div>
-    <button id="muteBtn" type="button" class="iconBtn">🔊</button>
+    <div id="throwCount">投擲数 0</div>
+    <button id="muteBtn" type="button" class="iconBtn" aria-label="音をOFFにする" aria-pressed="true">音ON</button>
     <button id="quitBtn" type="button" class="iconBtn">✕</button>
   </header>
+  <div id="turnBanner"></div>
   <div id="sheetWrap"></div>
   <div id="pad">
-    <div id="turnBanner"></div>
     <div id="padGrid">
       <button type="button" class="numBtn">1</button>
       <button type="button" class="numBtn">2</button>
@@ -695,8 +715,9 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
       <button type="button" class="numBtn">10</button>
       <button type="button" class="numBtn">11</button>
       <button type="button" class="numBtn">12</button>
+      <button id="missBtn" type="button" aria-label="0点 ミス"><span class="missValue">0</span><span class="missLabel">ミス</span></button>
+      <button id="undoBtn" type="button" class="numBtn" aria-label="1手戻す" title="1手戻す"><span aria-hidden="true">↺</span><span class="undoLabel" aria-hidden="true">戻す</span></button>
     </div>
-    <button id="missBtn" type="button">ミス（0点）</button>
   </div>
 </section>
 
@@ -806,15 +827,24 @@ function sfxElim(){tone(300,0.14,"square",0.09,0,200);tone(200,0.22,"square",0.0
 function sfxTick(){tone(660,0.05,"sine",0.09);}
 function sfxWin(){var n=[523,659,784,1047,1319];for(var i=0;i<n.length;i++)tone(n[i],0.16,"triangle",0.14,i*0.11);}
 
-window.addEventListener("pointerdown",unlockAudio);
-window.addEventListener("touchstart",unlockAudio,{passive:false});
-
 function tap(el,fn){
-  var last=0;
-  function go(){var n=Date.now();if(n-last<140)return;last=n;fn();}
-  el.addEventListener("pointerdown",function(){go();});
-  el.addEventListener("touchstart",function(e){e.preventDefault();go();},{passive:false});
-  el.addEventListener("click",function(){if(window.PointerEvent)return;go();});
+  var last=-1000,lastContact=-1000;
+  function go(){
+    var n=Date.now();if(n-last<140)return;last=n;
+    fn();
+    try{unlockAudio();}catch(e){}
+  }
+  el.addEventListener("pointerdown",function(e){
+    if(e.isPrimary===false||e.button>0)return;
+    e.preventDefault();lastContact=Date.now();go();
+  });
+  el.addEventListener("touchstart",function(e){
+    e.preventDefault();lastContact=Date.now();go();
+  },{passive:false});
+  el.addEventListener("click",function(e){
+    if(e.detail!==0&&Date.now()-lastContact<700)return;
+    go();
+  });
 }
 
 function popup(txt,cls){
@@ -989,16 +1019,26 @@ function renderSetup(){
   rt.querySelector(".swTxt").textContent=S.ruleElim?"ON":"OFF";
 }
 
+function renderMute(){
+  var btn=$("muteBtn");
+  btn.textContent=S.muted?"音OFF":"音ON";
+  btn.setAttribute("aria-label",S.muted?"音をONにする":"音をOFFにする");
+  btn.setAttribute("aria-pressed",S.muted?"false":"true");
+}
+
 function renderGame(){
   if(S.turn>=S.teams.length)S.turn=0;
-  $("throwCount").textContent="投了 "+S.throws;
-  $("undoBtn").style.opacity=S.undo.length?1:0.35;
-  $("muteBtn").textContent=S.muted?"🔇":"🔊";
-  buildSheet();buildBanner();
+  $("throwCount").textContent="投擲数 "+S.throws;
+  $("undoBtn").disabled=!S.undo.length;
+  renderMute();
+  buildBanner();buildSheet();
 }
 
 function buildBanner(){
-  var b=$("turnBanner");b.textContent="";
+  var b=$("turnBanner");
+  var oldFill=b.querySelector(".bbar i");
+  var oldWidth=oldFill?oldFill.getBoundingClientRect().width/Math.max(1,oldFill.parentNode.clientWidth)*100:0;
+  b.textContent="";
   var t=S.teams[S.turn];if(!t)return;
   var dot=document.createElement("i");dot.className="dot";
   dot.style.background=PALETTE[t.ci%4];
@@ -1015,23 +1055,48 @@ function buildBanner(){
   }
   b.appendChild(info);
   var bw=document.createElement("div");bw.className="bbar";
-  var bf=document.createElement("i");bf.style.width=Math.min(100,t.score*2)+"%";
+  var bf=document.createElement("i");bf.style.width=oldWidth+"%";
   if(t.score>=40)bf.className="hot";
   bw.appendChild(bf);b.appendChild(bw);
   var left=document.createElement("div");left.className="tleft";
   left.textContent="あと "+(50-t.score);
   b.appendChild(left);
+  animateProgress(bf,Math.min(100,t.score*2));
+}
+
+// 表示中の幅から新しい得点まで滑らかにつなぐ。
+function animateProgress(fill,target){
+  fill.getBoundingClientRect();
+  requestAnimationFrame(function(){if(fill.isConnected)fill.style.width=target+"%";});
 }
 
 function buildSheet(){
-  var wrap=$("sheetWrap");wrap.textContent="";
+  var wrap=$("sheetWrap");
+  var savedTop=wrap.scrollTop;
+  var oldWidths=[];
+  var oldFills=wrap.querySelectorAll(".pbar i");
+  for(var oi=0;oi<oldFills.length;oi++){
+    oldWidths.push(oldFills[oi].getBoundingClientRect().width/Math.max(1,oldFills[oi].parentNode.clientWidth)*100);
+  }
+  wrap.textContent="";
   var tbl=document.createElement("table");tbl.id="sheet";
   var maxHist=0,i;
   for(i=0;i<S.teams.length;i++)maxHist=Math.max(maxHist,S.teams[i].hist.length);
-  var cols=Math.max(1,maxHist+(S.screen==="game"?1:0));
+  var cols=Math.max(1,maxHist+(S.screen==="game"?1:0),Math.floor((wrap.clientWidth-160)/60));
+  tbl.style.width=(160+cols*60)+"px";
+  var cg=document.createElement("colgroup");
+  var teamCol=document.createElement("col");teamCol.style.width="160px";cg.appendChild(teamCol);
+  for(i=0;i<cols;i++){
+    var hc=document.createElement("col");hc.style.width="60px";cg.appendChild(hc);
+  }
+  tbl.appendChild(cg);
   var thead=document.createElement("thead");
   var trh=document.createElement("tr");
-  var th0=document.createElement("th");th0.className="pcol c0";th0.textContent="チーム";
+  var th0=document.createElement("th");th0.className="pcol c0";
+  th0.setAttribute("aria-label","チーム。大きい数字は今回の得点、小さい数字は累計、横棒は0点のミス");
+  var legend=document.createElement("span");legend.className="histLegend";legend.textContent="大：今回の得点／小：累計";
+  var zeroLegend=document.createElement("span");zeroLegend.className="histLegend";zeroLegend.textContent="–：0点（ミス）";
+  th0.appendChild(legend);th0.appendChild(zeroLegend);
   trh.appendChild(th0);
   for(i=0;i<cols;i++){var th=document.createElement("th");th.textContent=i+1;trh.appendChild(th);}
   thead.appendChild(trh);tbl.appendChild(thead);
@@ -1049,20 +1114,33 @@ function buildSheet(){
     pc.appendChild(l1);
     var mm=mems(t);
     if(mm.length){
-      var lm=document.createElement("div");lm.className="mem";lm.textContent=mm.join("・");
+      var lm=document.createElement("div");lm.className="mem";
+      lm.textContent=mm[t.hist.length%mm.length];
+      lm.setAttribute("aria-label","次の投手："+lm.textContent);
+      lm.title="参加者："+mm.join("・");
       pc.appendChild(lm);
     }
     var l2=document.createElement("div");l2.className="pinfo";
     var sc=document.createElement("b");sc.textContent=t.score;l2.appendChild(sc);
     var miss=document.createElement("span");
-    var mt="",m;
-    for(m=0;m<3;m++)mt+=m<t.misses?"●":"○";
-    miss.textContent=mt;
     miss.className="miss"+(t.misses>0?" m"+Math.min(t.misses,3):"");
+    if(S.ruleElim){
+      var remaining=Math.max(0,3-t.misses);
+      miss.setAttribute("aria-label","失格まで残り"+remaining+"回");
+      var rings=document.createElement("span");rings.className="missRings";
+      rings.setAttribute("aria-hidden","true");
+      for(var r=0;r<3;r++){
+        var ring=document.createElement("i");ring.className="missRing"+(r>=remaining?" used":"");
+        rings.appendChild(ring);
+      }
+      miss.appendChild(rings);
+      var remainingLabel=document.createElement("span");remainingLabel.textContent="残り"+remaining+"回";
+      miss.appendChild(remainingLabel);
+    }else miss.textContent="失格OFF";
     l2.appendChild(miss);
     pc.appendChild(l2);
     var l3=document.createElement("div");l3.className="pbar";
-    var fill=document.createElement("i");fill.style.width=Math.min(100,t.score*2)+"%";
+    var fill=document.createElement("i");fill.style.width=(oldWidths[ti]||0)+"%";
     if(t.score>=40)fill.className="hot";
     l3.appendChild(fill);pc.appendChild(l3);
     tr.appendChild(pc);
@@ -1089,7 +1167,29 @@ function buildSheet(){
   });
   tbl.appendChild(tb);
   wrap.appendChild(tbl);
-  wrap.scrollLeft=wrap.scrollWidth;
+  wrap.scrollTop=savedTop;
+  // 固定見出しの下に手番の行が入るよう、必要な距離だけ送る。
+  var currentRow=tbl.querySelector("tr.cur");
+  if(currentRow){
+    var view=wrap.getBoundingClientRect();
+    var rowBox=currentRow.getBoundingClientRect();
+    var visibleTop=view.top+wrap.clientTop+thead.getBoundingClientRect().height;
+    var visibleBottom=view.top+wrap.clientTop+wrap.clientHeight;
+    if(rowBox.top<visibleTop)wrap.scrollTop-=visibleTop-rowBox.top;
+    else if(rowBox.bottom>visibleBottom){
+      wrap.scrollTop+=Math.min(rowBox.bottom-visibleBottom,rowBox.top-visibleTop);
+    }
+  }
+  var newFills=tbl.querySelectorAll(".pbar i");
+  for(var fi=0;fi<newFills.length;fi++)animateProgress(newFills[fi],Math.min(100,S.teams[fi].score*2));
+  // 最初は履歴の先頭を見せ、収まらなくなったら次の入力枠まで送る。
+  wrap.scrollLeft=0;
+  var nextCell=tbl.querySelector("td.next");
+  if(nextCell&&tbl.offsetWidth>wrap.clientWidth){
+    var nextRight=nextCell.getBoundingClientRect().right;
+    var viewRight=wrap.getBoundingClientRect().left+wrap.clientLeft+wrap.clientWidth;
+    wrap.scrollLeft=Math.max(0,nextRight-viewRight);
+  }
 }
 
 function renderEnd(){
@@ -1143,7 +1243,7 @@ function renderEnd(){
   $("undoEndBtn").style.opacity=S.undo.length?1:0.35;
 }
 
-var cfOn=false,cfId=0,cfPs=[],cfCv=null,cfCtx=null;
+var cfOn=false,cfId=0,cfPs=[],cfCv=null,cfCtx=null,cfPrev=0,cfAcc=0;
 function sizeConfetti(){var d=Math.min(devicePixelRatio||1,2);cfCv.width=innerWidth*d|0;cfCv.height=innerHeight*d|0;}
 function newCf(any){
   return {x:Math.random()*innerWidth,y:any?Math.random()*innerHeight:-20-Math.random()*60,
@@ -1151,7 +1251,7 @@ function newCf(any){
     w:5+Math.random()*7,h:8+Math.random()*10,c:PALETTE[(Math.random()*PALETTE.length)|0]};
 }
 function startConfetti(){
-  if(cfOn)return;cfOn=true;
+  if(cfOn)return;cfOn=true;cfPrev=0;cfAcc=0;
   cfCv=$("confetti");cfCtx=cfCv.getContext("2d");
   sizeConfetti();cfPs=[];
   for(var i=0;i<140;i++)cfPs.push(newCf(true));
@@ -1162,21 +1262,32 @@ function stopConfetti(){
   if(cfId)cancelAnimationFrame(cfId);cfId=0;
   if(cfCtx&&cfCv)cfCtx.clearRect(0,0,cfCv.width,cfCv.height);
 }
-function cfFrame(){
+function updateConfetti(){
+  for(var i=0;i<cfPs.length;i++){
+    var p=cfPs[i];
+    p.y+=p.vy;p.x+=p.vx+Math.sin(p.r*3)*0.4;p.r+=p.vr;
+    if(p.y>innerHeight+20)cfPs[i]=newCf(false);
+  }
+}
+function cfFrame(now){
   if(!cfOn)return;
   cfId=requestAnimationFrame(cfFrame);
+  if(!cfPrev)cfPrev=now;
+  cfAcc+=Math.min(250,now-cfPrev);cfPrev=now;
+  var steps=0,step=1000/60;
+  while(cfAcc>=step&&steps<5){cfAcc-=step;steps++;updateConfetti();}
+  if(steps>=5)cfAcc=0;
   var d=Math.min(devicePixelRatio||1,2);
   cfCtx.setTransform(d,0,0,d,0,0);
   cfCtx.clearRect(0,0,innerWidth,innerHeight);
   for(var i=0;i<cfPs.length;i++){
     var p=cfPs[i];
-    p.y+=p.vy;p.x+=p.vx+Math.sin(p.r*3)*0.4;p.r+=p.vr;
-    if(p.y>innerHeight+20){cfPs[i]=newCf(false);continue;}
     cfCtx.save();cfCtx.translate(p.x,p.y);cfCtx.rotate(p.r);
     cfCtx.fillStyle=p.c;cfCtx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
     cfCtx.restore();
   }
 }
+
 window.addEventListener("resize",function(){if(cfOn)sizeConfetti();});
 
 (function wireSetup(){
@@ -1230,7 +1341,7 @@ tap($("undoBtn"),undoThrow);
 tap($("undoEndBtn"),undoThrow);
 tap($("muteBtn"),function(){
   S.muted=!S.muted;
-  $("muteBtn").textContent=S.muted?"🔇":"🔊";
+  renderMute();
   save();if(!S.muted)sfxTick();
 });
 tap($("quitBtn"),quitTap);
