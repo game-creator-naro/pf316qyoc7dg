@@ -487,6 +487,7 @@ section{position:fixed;inset:0;display:flex;flex-direction:column;animation:fade
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
 button{font-family:inherit;cursor:pointer}
 input:focus{outline:none;border-color:#ffd43b88!important}
+#addTeam{touch-action:none}
 .setupScroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .setupInner{max-width:560px;width:100%;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 14px}
 .pins{display:flex;gap:10px;align-items:flex-end;justify-content:center;height:84px}
@@ -579,6 +580,7 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
 #missBtn .missLabel{font-size:12px;line-height:14px}
 #missBtn{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .miss{display:flex;flex-direction:column;gap:3px}
+.remainingLabel{line-height:14px;white-space:pre-line}
 .missRings{display:flex;gap:4px}
 .missRing{display:block;width:14px;height:14px;border:2px solid currentColor;border-radius:50%;position:relative}
 .missRing.used{border-color:transparent;opacity:.65}
@@ -605,6 +607,16 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
 .pop.warn{color:var(--warn)}
 .pop.bad{color:var(--danger)}
 @keyframes floatUp{0%{opacity:0;transform:translate(-50%,14px) scale(.7)}15%{opacity:1;transform:translate(-50%,0) scale(1.08)}30%{transform:translate(-50%,-6px) scale(1)}100%{opacity:0;transform:translate(-50%,-70px) scale(.95)}}
+@media (max-width:600px) and (max-height:700px){
+  .setupInner{padding-top:calc(env(safe-area-inset-top,0px) + 6px)}
+  .pins{height:48px}
+  .pin{height:40px}
+  .pin.tall{height:46px}
+  #ttl{margin-top:2px;margin-bottom:0}
+  .tag{margin-bottom:4px}
+  .ruleSummary{margin-bottom:8px}
+  .ruleRow{margin-bottom:8px}
+}
 </style>
 </head>
 <body data-gcn-state="title">
@@ -635,9 +647,9 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
           </div>
           <div class="memberRows">
             <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
           </div>
           <button type="button" class="madd">＋ メンバーを追加</button>
         </div>
@@ -649,13 +661,13 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
           </div>
           <div class="memberRows">
             <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
           </div>
           <button type="button" class="madd">＋ メンバーを追加</button>
         </div>
-        <div class="teamCard">
+        <div class="teamCard" hidden>
           <div class="teamHead">
             <span class="dot"></span>
             <input type="text" class="tname" maxlength="12" placeholder="チーム名">
@@ -663,13 +675,13 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
           </div>
           <div class="memberRows">
             <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
           </div>
           <button type="button" class="madd">＋ メンバーを追加</button>
         </div>
-        <div class="teamCard">
+        <div class="teamCard" hidden>
           <div class="teamHead">
             <span class="dot"></span>
             <input type="text" class="tname" maxlength="12" placeholder="チーム名">
@@ -677,9 +689,9 @@ td.next::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(255
           </div>
           <div class="memberRows">
             <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー1"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
-            <div class="mRow"><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー2"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー3"><button type="button" class="mdel">✕</button></div>
+            <div class="mRow" hidden><input type="text" class="mname" maxlength="10" placeholder="メンバー4"><button type="button" class="mdel">✕</button></div>
           </div>
           <button type="button" class="madd">＋ メンバーを追加</button>
         </div>
@@ -782,7 +794,13 @@ function normSetup(a){
   return out;
 }
 
+// 編集開始後に届く保存データで設定を上書きしない。
+var setupInteracted=false;
+["focusin","input","compositionstart","pointerdown","touchstart","keydown"].forEach(function(name){
+  $("setupScreen").addEventListener(name,function(){setupInteracted=true;},{capture:true,passive:false});
+});
 GCN.onInit=function(sd){
+  if(setupInteracted)return;
   var d=sd;
   if(typeof d==="string"){try{d=JSON.parse(d);}catch(e){d=null;}}
   if(d&&typeof d==="object"){
@@ -1013,6 +1031,7 @@ function renderSetup(){
     }
     card.querySelector(".madd").style.opacity=ts.mcount>=4?0.35:1;
   }
+  $("addTeam").disabled=S.teamsSetup.length>=4;
   $("addTeam").style.opacity=S.teamsSetup.length>=4?0.35:1;
   var rt=$("ruleToggle");
   rt.className="switch"+(S.ruleElim?" on":"");
@@ -1134,7 +1153,7 @@ function buildSheet(){
         rings.appendChild(ring);
       }
       miss.appendChild(rings);
-      var remainingLabel=document.createElement("span");remainingLabel.textContent="残り"+remaining+"回";
+      var remainingLabel=document.createElement("span");remainingLabel.className="remainingLabel";remainingLabel.textContent="失格まで\n残り"+remaining+"回";
       miss.appendChild(remainingLabel);
     }else miss.textContent="失格OFF";
     l2.appendChild(miss);
@@ -1345,13 +1364,96 @@ tap($("muteBtn"),function(){
   save();if(!S.muted)sfxTick();
 });
 tap($("quitBtn"),quitTap);
-tap($("addTeam"),function(){
-  if(S.teamsSetup.length>=4)return;
+// 増員はボタン内で押して離した独立操作だけで確定する。
+(function wireAddTeam(){
+  var btn=$("addTeam"),contact=null,lastActivation=-1000;
+  function begin(x,y,kind,id){
+    if(btn.disabled||S.screen!=="setup")return;
+    if(!contact){
+      var r=btn.getBoundingClientRect();
+      contact={x:x,y:y,left:r.left,top:r.top,width:r.width,height:r.height,
+        time:Date.now(),cancelled:false,pointer:null,touch:null};
+    }
+    contact[kind]=id;
+  }
+  function move(x,y){
+    if(contact&&(Math.abs(x-contact.x)>12||Math.abs(y-contact.y)>12))contact.cancelled=true;
+  }
+  function activate(c){
+    var now=Date.now(),r=btn.getBoundingClientRect();
+    if(btn.disabled||S.screen!=="setup"||now-lastActivation<650)return;
+    if(c&&(c.cancelled||now-c.time>1000||Math.abs(r.top-c.top)>6||
+      Math.abs(r.left-c.left)>6||Math.abs(r.width-c.width)>6||Math.abs(r.height-c.height)>6))return;
+    lastActivation=now;
+    addTeam();
+    try{unlockAudio();}catch(err){}
+  }
+  function end(kind,id,x,y,cancelled){
+    if(!contact||contact[kind]!==id)return;
+    if(!cancelled)move(x,y);
+    contact[kind]=null;
+    // 一方のイベント列がキャンセルされても、もう一方があれば追跡を続ける。
+    if(contact.pointer!==null||contact.touch!==null)return;
+    var c=contact;contact=null;
+    if(!cancelled)activate(c);
+  }
+  btn.addEventListener("pointerdown",function(e){
+    if(e.isPrimary===false||e.button>0)return;
+    begin(e.clientX,e.clientY,"pointer",e.pointerId);
+    try{btn.setPointerCapture(e.pointerId);}catch(err){}
+  });
+  btn.addEventListener("touchstart",function(e){
+    if(e.touches.length!==1){if(contact)contact.cancelled=true;return;}
+    e.preventDefault();
+    var q=e.changedTouches[0];if(q)begin(q.clientX,q.clientY,"touch",q.identifier);
+  },{passive:false});
+  window.addEventListener("pointermove",function(e){
+    if(contact&&contact.pointer===e.pointerId)move(e.clientX,e.clientY);
+  });
+  window.addEventListener("touchmove",function(e){
+    if(!contact||contact.touch===null)return;
+    for(var i=0;i<e.changedTouches.length;i++){
+      var q=e.changedTouches[i];
+      if(q.identifier===contact.touch){e.preventDefault();move(q.clientX,q.clientY);break;}
+    }
+  },{passive:false});
+  window.addEventListener("pointerup",function(e){end("pointer",e.pointerId,e.clientX,e.clientY,false);});
+  window.addEventListener("pointercancel",function(e){end("pointer",e.pointerId,e.clientX,e.clientY,true);});
+  function touchEnd(e,cancelled){
+    for(var i=0;i<e.changedTouches.length;i++){
+      var q=e.changedTouches[i];end("touch",q.identifier,q.clientX,q.clientY,cancelled);
+    }
+  }
+  window.addEventListener("touchend",function(e){touchEnd(e,false);},{passive:false});
+  window.addEventListener("touchcancel",function(e){touchEnd(e,true);},{passive:false});
+  $("setupScreen").addEventListener("scroll",function(){if(contact)contact.cancelled=true;},{capture:true,passive:true});
+  window.addEventListener("blur",function(){contact=null;});
+  btn.addEventListener("click",function(e){
+    // 通常のタップは上の終了処理で確定済み。clickはキーボード・支援操作の入口。
+    if(e.detail!==0)return;
+    contact=null;activate(null);
+  });
+})();
+function addTeam(){
+  if(S.screen!=="setup"||S.teamsSetup.length>=4)return;
   var n=S.teamsSetup.length+1;
   S.teamsSetup.push({name:"チーム"+n,members:["","","",""],mcount:1});
   save();renderSetup();sfxTick();
-});
-tap($("startBtn"),startGame);
+  requestAnimationFrame(function(){
+    if(S.screen!=="setup")return;
+    var card=$("teamList").children[n-1];
+    if(!card||card.hidden)return;
+    var scroll=document.querySelector(".setupScroll");
+    var viewport=scroll.getBoundingClientRect(),bounds=card.getBoundingClientRect();
+    // 追加したカードだけを表示する。入力へのフォーカスは動かさない。
+    if(bounds.height>scroll.clientHeight||bounds.top<viewport.top){
+      scroll.scrollTop+=bounds.top-viewport.top;
+    }else if(bounds.bottom>viewport.bottom){
+      scroll.scrollTop+=bounds.bottom-viewport.bottom;
+    }
+  });
+}
+tap($("startBtn"),function(){if(S.screen==="setup")startGame();});
 tap($("rematchBtn"),rematch);
 tap($("toSetupBtn"),toSetup);
 tap($("ruleToggle"),function(){
